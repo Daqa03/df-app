@@ -253,7 +253,7 @@ export default function ComprasScreen() {
     }
   };
 
-  const PanelResumenCompra = () => (
+  const renderPanelResumenCompra = () => (
     <View style={[styles.rightPanel, {flex: 1}]}>
       <Text style={styles.panelTitle}>Resumen de la Compra</Text>
       
@@ -399,7 +399,7 @@ export default function ComprasScreen() {
       </View>
 
       {/* PANEL DERECHO: Resumen de Compra (Escritorio) */}
-      {isDesktop && <PanelResumenCompra />}
+      {isDesktop && renderPanelResumenCompra()}
 
       {/* BOTÓN FLOTANTE (Solo Móvil) */}
       {!isDesktop && carrito.length > 0 && (
@@ -416,7 +416,7 @@ export default function ComprasScreen() {
               <TouchableOpacity style={styles.closeSheetBtn} onPress={() => setCarritoVisibleMovil(false)}>
                 <Text style={styles.closeSheetText}>Cerrar Carrito ⬇</Text>
               </TouchableOpacity>
-              <PanelResumenCompra />
+              {renderPanelResumenCompra()}
             </View>
           </View>
         </Modal>

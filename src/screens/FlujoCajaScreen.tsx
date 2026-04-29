@@ -28,6 +28,10 @@ export default function FlujoCajaScreen() {
   const [descripcion, setDescripcion] = useState('');
   const [procesando, setProcesando] = useState(false);
 
+  // Estados para Modal Detalles
+  const [modalDetalleVisible, setModalDetalleVisible] = useState(false);
+  const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<Movimiento | null>(null);
+
   const fetchData = async () => {
     setLoading(true);
     
@@ -210,7 +214,14 @@ export default function FlujoCajaScreen() {
                   <Text style={styles.emptyText}>No se encontraron movimientos.</Text>
                 ) : (
                   movimientosFiltrados.map(mov => (
-                    <View key={mov.id} style={styles.historyRow}>
+                    <TouchableOpacity 
+                      key={mov.id} 
+                      style={styles.historyRow}
+                      onPress={() => {
+                        setMovimientoSeleccionado(mov);
+                        setModalDetalleVisible(true);
+                      }}
+                    >
                       <View style={styles.historyIconBox}>
                         <Text style={{fontSize: 18}}>{mov.tipo_movimiento === 'Ingreso' ? '⬇️' : '⬆️'}</Text>
                       </View>
@@ -223,7 +234,7 @@ export default function FlujoCajaScreen() {
                           {mov.tipo_movimiento === 'Ingreso' ? '+' : '-'}{mov.monto.toLocaleString()} {mov.cuentas?.moneda}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </ScrollView>
@@ -287,6 +298,42 @@ export default function FlujoCajaScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: Detalles del Movimiento */}
+      <Modal visible={modalDetalleVisible} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalle del Movimiento</Text>
+              <TouchableOpacity onPress={() => setModalDetalleVisible(false)}><Text style={styles.closeBtn}>✕</Text></TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {movimientoSeleccionado && (
+                <>
+                  <Text style={styles.detalleLabel}>Fecha y Hora</Text>
+                  <Text style={styles.detalleValue}>{formatearFecha(movimientoSeleccionado.fecha)}</Text>
+
+                  <Text style={styles.detalleLabel}>Tipo de Operación</Text>
+                  <Text style={[styles.detalleValue, {color: movimientoSeleccionado.tipo_movimiento === 'Ingreso' ? '#10B981' : '#DC2626'}]}>
+                    {movimientoSeleccionado.tipo_movimiento}
+                  </Text>
+
+                  <Text style={styles.detalleLabel}>Monto</Text>
+                  <Text style={styles.detalleValue}>
+                    {movimientoSeleccionado.monto.toLocaleString()} {movimientoSeleccionado.cuentas?.moneda}
+                  </Text>
+
+                  <Text style={styles.detalleLabel}>Cuenta Afectada</Text>
+                  <Text style={styles.detalleValue}>{movimientoSeleccionado.cuentas?.nombre}</Text>
+
+                  <Text style={styles.detalleLabel}>Descripción / Detalles</Text>
+                  <Text style={styles.detalleValueDesc}>{movimientoSeleccionado.descripcion || 'Sin detalles registrados.'}</Text>
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -359,5 +406,10 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
   pillTextActive: { color: '#FFF' },
   submitBtn: { padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-  submitBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 }
+  submitBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+
+  // Detalles Modal
+  detalleLabel: { fontSize: 12, color: '#6B7280', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 4 },
+  detalleValue: { fontSize: 16, color: '#1A1A1A', fontWeight: 'bold', marginBottom: 15 },
+  detalleValueDesc: { fontSize: 14, color: '#1A1A1A', lineHeight: 22, backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' }
 });

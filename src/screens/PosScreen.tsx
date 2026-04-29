@@ -29,6 +29,7 @@ export default function PosScreen() {
   const [metodoPagoSeleccionadoId, setMetodoPagoSeleccionadoId] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [busquedaCliente, setBusquedaCliente] = useState('');
+  const [frecuenciaSan, setFrecuenciaSan] = useState('Quincenal');
   const [procesando, setProcesando] = useState(false);
 
   useEffect(() => {
@@ -172,7 +173,7 @@ export default function PosScreen() {
            monto_total: totalCOP,
            saldo_pendiente: totalCOP,
            estado: 'ACTIVO',
-           frecuencia_pago: 'Quincenal' // Frecuencia por defecto
+           frecuencia_pago: frecuenciaSan
         }]);
         alert('¡Venta a crédito registrada y San creado exitosamente!');
       } 
@@ -182,12 +183,14 @@ export default function PosScreen() {
         if (cuentaDestino.moneda === 'USD') montoFinal = totalUSD;
         if (cuentaDestino.moneda === 'VES') montoFinal = totalVES;
 
-        const nombreCli = entidades.find(e => e.id === clienteId)?.nombre || '';
+        const nombreCli = entidades.find(e => e.id === clienteId)?.nombre || 'Mostrador';
+        const detalleProductos = carrito.map(item => `${item.cantidad}x ${item.producto.nombre}`).join(', ');
+        
         await supabase.from('movimientos_caja').insert([{
           cuenta_id: cuentaDestino.id,
           tipo_movimiento: 'Ingreso',
           monto: montoFinal,
-          descripcion: `POS Venta. ${nombreCli ? 'Cliente: ' + nombreCli : ''}`
+          descripcion: `Venta. Cliente: ${nombreCli}\nProductos: ${detalleProductos}`
         }]);
         alert('¡Venta completada con éxito!');
       }
@@ -346,6 +349,23 @@ export default function PosScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                {esDeudaUi && (
+                  <>
+                    <Text style={styles.label}>Frecuencia de Pago del San</Text>
+                    <View style={styles.pillsContainer}>
+                      {['Semanal', 'Quincenal', 'Mensual'].map(freq => (
+                        <TouchableOpacity 
+                          key={freq} 
+                          style={[styles.paymentPill, frecuenciaSan === freq && styles.paymentPillActive]}
+                          onPress={() => setFrecuenciaSan(freq)}
+                        >
+                          <Text style={[styles.paymentPillText, frecuenciaSan === freq && styles.paymentPillTextActive]}>{freq}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
 
                 <Text style={styles.label}>Cliente {esDeudaUi ? '(Obligatorio para Créditos)' : '(Opcional)'}</Text>
                 <TextInput 
