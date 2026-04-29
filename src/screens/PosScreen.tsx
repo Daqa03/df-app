@@ -223,7 +223,7 @@ export default function PosScreen() {
           carrito.map((item) => (
             <View key={item.producto.id} style={styles.cartItem}>
               <View style={{flex: 1}}>
-                <Text style={styles.cartItemName} numberOfLines={1}>{item.producto.nombre}</Text>
+                <Text style={styles.cartItemName} numberOfLines={1}>[{item.producto.codigo_sku || 'S/F'}] {item.producto.nombre}</Text>
                 <View style={styles.priceTypeRow}>
                   <TouchableOpacity style={[styles.priceTypeBtn, item.tipoPrecio === 'detal' && styles.priceTypeActive]} onPress={() => cambiarTipoPrecio(item.producto.id, 'detal')}>
                     <Text style={[styles.priceTypeText, item.tipoPrecio === 'detal' && styles.priceTypeTextActive]}>Detal</Text>
@@ -277,7 +277,7 @@ export default function PosScreen() {
               <TouchableOpacity key={prod.id} style={[styles.prodCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
                 <Image source={{ uri: prod.imagen_url || 'https://via.placeholder.com/150?text=S/F' }} style={styles.prodImg} />
                 <View style={styles.prodInfo}>
-                  <Text style={styles.prodName} numberOfLines={2}>{prod.nombre}</Text>
+                  <Text style={styles.prodName} numberOfLines={2}>[{prod.codigo_sku || 'S/F'}] {prod.nombre}</Text>
                   <Text style={styles.prodPrice}>${prod.precio_detal_cop.toLocaleString()}</Text>
                   <Text style={styles.prodStock}>Stock: {prod.stock_actual}</Text>
                 </View>
