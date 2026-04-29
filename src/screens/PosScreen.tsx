@@ -9,12 +9,12 @@ type Entidad = any;
 export default function PosScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width > 1024;
-  
+
   const [productos, setProductos] = useState<Producto[]>([]);
   const [entidades, setEntidades] = useState<Entidad[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [loading, setLoading] = useState(true);
-  
+
   // Tasas de cambio y Cuentas Dinámicas de Supabase
   const [tasaUSD, setTasaUSD] = useState(1);
   const [tasaVES, setTasaVES] = useState(1);
@@ -23,7 +23,7 @@ export default function PosScreen() {
   // Estados del Carrito y UI
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [carritoVisibleMovil, setCarritoVisibleMovil] = useState(false);
-  
+
   // Estados del Checkout (Pago)
   const [checkoutModal, setCheckoutModal] = useState(false);
   const [reciboModal, setReciboModal] = useState(false);
@@ -36,7 +36,7 @@ export default function PosScreen() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      
+
       const { data: prodData } = await supabase.from('productos').select('*').gt('stock_actual', 0).order('nombre');
       if (prodData) setProductos(prodData);
 
@@ -53,17 +53,17 @@ export default function PosScreen() {
 
       const { data: cuentasData } = await supabase.from('cuentas').select('*');
       const cuentasActivas = (cuentasData || []).filter(c => c.activo === true);
-        
+
       const existeSan = cuentasActivas.some(c => c.tipo?.toLowerCase() === 'deuda' || c.nombre?.toLowerCase().includes('san'));
       if (!existeSan) {
-          cuentasActivas.push({
-              id: 'san-credito-fallback',
-              nombre: 'San / Crédito',
-              tipo: 'DEUDA',
-              moneda: 'COP',
-              saldo_actual: 0,
-              activo: true
-          });
+        cuentasActivas.push({
+          id: 'san-credito-fallback',
+          nombre: 'San / Crédito',
+          tipo: 'DEUDA',
+          moneda: 'COP',
+          saldo_actual: 0,
+          activo: true
+        });
       }
 
       setMetodosPago(cuentasActivas);
@@ -76,8 +76,8 @@ export default function PosScreen() {
     fetchData();
   }, []);
 
-  const productosFiltrados = productos.filter(p => 
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     (p.codigo_sku && p.codigo_sku.toLowerCase().includes(busqueda.toLowerCase()))
   );
 
@@ -123,10 +123,10 @@ export default function PosScreen() {
     if (carrito.length === 0) return;
     setClienteId('');
     setBusquedaCliente('');
-    
+
     if (!isDesktop) {
       setCarritoVisibleMovil(false);
-      setTimeout(() => setCheckoutModal(true), 300); 
+      setTimeout(() => setCheckoutModal(true), 300);
     } else {
       setCheckoutModal(true);
     }
@@ -135,11 +135,11 @@ export default function PosScreen() {
   const confirmarVentaFinal = async () => {
     const cuentaDestino = metodosPago.find(c => c.id === metodoPagoSeleccionadoId);
     const esDeuda = cuentaDestino?.tipo?.toLowerCase() === 'deuda' || cuentaDestino?.nombre?.toLowerCase().includes('san');
-    
+
     if (esDeuda && !clienteId) {
       return alert('Debes seleccionar un cliente del directorio para registrar el Crédito / San.');
     }
-    
+
     setProcesando(true);
     try {
       // 1. Crear el registro maestro de la VENTA
@@ -166,18 +166,18 @@ export default function PosScreen() {
         const nuevoStock = item.producto.stock_actual - item.cantidad;
         await supabase.from('productos').update({ stock_actual: nuevoStock }).eq('id', item.producto.id);
       }
-      
+
       // 4. Si es San/Crédito, inyectar a la tabla Sanes
       if (esDeuda) {
         await supabase.from('sanes').insert([{
-           entidad_id: clienteId,
-           monto_total: totalCOP,
-           saldo_pendiente: totalCOP,
-           estado: 'ACTIVO',
-           frecuencia_pago: frecuenciaSan
+          entidad_id: clienteId,
+          monto_total: totalCOP,
+          saldo_pendiente: totalCOP,
+          estado: 'ACTIVO',
+          frecuencia_pago: frecuenciaSan
         }]);
         alert('¡Venta a crédito registrada y San creado exitosamente!');
-      } 
+      }
       // 5. Si NO es deuda, ingresar el dinero al flujo de caja
       else if (cuentaDestino && cuentaDestino.id !== 'san-credito-fallback') {
         let montoFinal = totalCOP;
@@ -186,7 +186,7 @@ export default function PosScreen() {
 
         const nombreCli = entidades.find(e => e.id === clienteId)?.nombre || 'Mostrador';
         const detalleProductos = carrito.map(item => `${item.cantidad}x ${item.producto.nombre} (${item.tipoPrecio === 'mayor' ? 'Mayor' : 'Detal'})`).join(', ');
-        
+
         await supabase.from('movimientos_caja').insert([{
           cuenta_id: cuentaDestino.id,
           tipo_movimiento: 'Ingreso',
@@ -195,10 +195,10 @@ export default function PosScreen() {
         }]);
         alert('¡Venta completada con éxito!');
       }
-      
+
       setCheckoutModal(false);
       limpiarCarrito();
-      
+
       // Recargar catálogo
       const { data } = await supabase.from('productos').select('*').gt('stock_actual', 0).order('nombre');
       if (data) setProductos(data);
@@ -222,11 +222,11 @@ export default function PosScreen() {
 
       <ScrollView style={styles.cartItemsList} showsVerticalScrollIndicator={false}>
         {carrito.length === 0 ? (
-          <View style={styles.emptyCart}><Text style={{color: '#9CA3AF'}}>El carrito está vacío</Text></View>
+          <View style={styles.emptyCart}><Text style={{ color: '#9CA3AF' }}>El carrito está vacío</Text></View>
         ) : (
           carrito.map((item) => (
             <View key={item.producto.id} style={styles.cartItem}>
-              <View style={{flex: 1}}>
+              <View style={{ flex: 1 }}>
                 {item.producto.codigo_sku ? <Text style={styles.skuText}>[{item.producto.codigo_sku}]</Text> : null}
                 <Text style={styles.cartItemName} numberOfLines={1}>{item.producto.nombre}</Text>
                 <View style={styles.priceTypeRow}>
@@ -252,7 +252,7 @@ export default function PosScreen() {
       <View style={styles.totalsArea}>
         <View style={styles.totalRow}><Text style={styles.totalLabelSub}>Total USD:</Text><Text style={styles.totalValueSub}>$ {totalUSD.toFixed(2)}</Text></View>
         <View style={styles.totalRow}><Text style={styles.totalLabelSub}>Total VES:</Text><Text style={styles.totalValueSub}>Bs. {totalVES.toFixed(2)}</Text></View>
-        <View style={[styles.totalRow, {marginTop: 10, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 10}]}>
+        <View style={[styles.totalRow, { marginTop: 10, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 10 }]}>
           <Text style={styles.totalLabelMain}>Total (COP):</Text>
           <Text style={styles.totalValueMain}>${totalCOP.toLocaleString()}</Text>
         </View>
@@ -272,17 +272,17 @@ export default function PosScreen() {
 
   return (
     <View style={[styles.container, isDesktop && styles.rowLayout]}>
-      
+
       {/* SECCIÓN IZQUIERDA: CATÁLOGO */}
       <View style={styles.catalogoSection}>
         <View style={styles.header}>
           <Text style={styles.title}>Caja Rápida</Text>
           <View style={styles.searchBox}>
-            <TextInput style={[styles.searchInput, {outlineStyle: 'none'} as any]} placeholder="Buscar producto..." value={busqueda} onChangeText={setBusqueda} />
+            <TextInput style={[styles.searchInput, { outlineStyle: 'none' } as any]} placeholder="Buscar producto..." value={busqueda} onChangeText={setBusqueda} />
           </View>
         </View>
 
-        {loading ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 50}} /> : (
+        {loading ? <ActivityIndicator size="large" color="#6B0D23" style={{ marginTop: 50 }} /> : (
           <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
             {productosFiltrados.map((prod) => (
               <TouchableOpacity key={prod.id} style={[styles.prodCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
@@ -336,7 +336,7 @@ export default function PosScreen() {
                 <Text style={styles.modalTitle}>Confirmar Venta</Text>
                 <TouchableOpacity onPress={() => setCheckoutModal(false)}><Text style={styles.modalCloseText}>✕</Text></TouchableOpacity>
               </View>
-              
+
               <View style={styles.checkoutContent}>
                 <View style={styles.amountBanner}>
                   <Text style={styles.amountLabel}>Total a cobrar:</Text>
@@ -347,8 +347,8 @@ export default function PosScreen() {
                 <Text style={styles.label}>Método de Pago / Cuenta</Text>
                 <View style={styles.pillsContainer}>
                   {metodosPago.map(cuenta => (
-                    <TouchableOpacity 
-                      key={cuenta.id} 
+                    <TouchableOpacity
+                      key={cuenta.id}
                       style={[styles.paymentPill, metodoPagoSeleccionadoId === cuenta.id && styles.paymentPillActive]}
                       onPress={() => setMetodoPagoSeleccionadoId(cuenta.id)}
                     >
@@ -362,8 +362,8 @@ export default function PosScreen() {
                     <Text style={styles.label}>Frecuencia de Pago del San</Text>
                     <View style={styles.pillsContainer}>
                       {['Semanal', 'Quincenal', 'Mensual'].map(freq => (
-                        <TouchableOpacity 
-                          key={freq} 
+                        <TouchableOpacity
+                          key={freq}
                           style={[styles.paymentPill, frecuenciaSan === freq && styles.paymentPillActive]}
                           onPress={() => setFrecuenciaSan(freq)}
                         >
@@ -375,17 +375,17 @@ export default function PosScreen() {
                 )}
 
                 <Text style={styles.label}>Cliente {esDeudaUi ? '(Obligatorio para Créditos)' : '(Opcional)'}</Text>
-                <TextInput 
-                  style={[styles.input, {marginBottom: 10, outlineStyle: 'none'} as any, esDeudaUi && !clienteId && {borderColor: '#DC2626', borderWidth: 2}]} 
-                  placeholder="Buscar en directorio..." 
-                  value={busquedaCliente} 
-                  onChangeText={setBusquedaCliente} 
+                <TextInput
+                  style={[styles.input, { marginBottom: 10, outlineStyle: 'none' } as any, esDeudaUi && !clienteId && { borderColor: '#DC2626', borderWidth: 2 }]}
+                  placeholder="Buscar en directorio..."
+                  value={busquedaCliente}
+                  onChangeText={setBusquedaCliente}
                 />
-                
+
                 <View style={[styles.pillsContainer, { maxHeight: 150, overflow: 'hidden' }]}>
                   {entidades.filter(e => e.nombre.toLowerCase().includes(busquedaCliente.toLowerCase())).slice(0, 10).map(ent => (
-                    <TouchableOpacity 
-                      key={ent.id} 
+                    <TouchableOpacity
+                      key={ent.id}
                       style={[styles.paymentPill, clienteId === ent.id && styles.paymentPillActive]}
                       onPress={() => setClienteId(clienteId === ent.id ? '' : ent.id)}
                     >
@@ -394,7 +394,7 @@ export default function PosScreen() {
                   ))}
                 </View>
 
-                {procesando ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 20}} /> : (
+                {procesando ? <ActivityIndicator size="large" color="#6B0D23" style={{ marginTop: 20 }} /> : (
                   <TouchableOpacity style={styles.vinotintoBtn} onPress={confirmarVentaFinal}>
                     <Text style={styles.vinotintoBtnText}>{esDeudaUi ? 'Vender a Crédito / San' : 'Completar y Cobrar'}</Text>
                   </TouchableOpacity>
@@ -416,9 +416,9 @@ export default function PosScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView style={{ padding: 20, maxHeight: 500 }} showsVerticalScrollIndicator={false}>
-              <Text style={{ textAlign: 'center', fontSize: 18, fontWeight: 'bold', marginBottom: 5 }}>D&F MAKEUP</Text>
+              <Text style={{ textAlign: 'center', fontSize: 18, fontWeight: 'bold', marginBottom: 5 }}>D&F COSMETICS</Text>
               <Text style={{ textAlign: 'center', color: '#6B7280', fontSize: 12, marginBottom: 20 }}>Recibo de Venta</Text>
-              
+
               <View style={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={{ fontWeight: 'bold', flex: 2, color: '#374151', fontSize: 13 }}>Producto</Text>
                 <Text style={{ fontWeight: 'bold', width: 40, textAlign: 'center', color: '#374151', fontSize: 13 }}>Cant</Text>
@@ -426,8 +426,8 @@ export default function PosScreen() {
               </View>
 
               {carrito.map((item, index) => {
-                 const precio = item.tipoPrecio === 'detal' ? item.producto.precio_detal_cop : item.producto.precio_mayor_cop;
-                 return (
+                const precio = item.tipoPrecio === 'detal' ? item.producto.precio_detal_cop : item.producto.precio_mayor_cop;
+                return (
                   <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
                     <View style={{ flex: 2 }}>
                       <Text style={{ fontSize: 13, color: '#1A1A1A' }}>{item.producto.nombre}</Text>
@@ -436,7 +436,7 @@ export default function PosScreen() {
                     <Text style={{ fontSize: 13, width: 40, textAlign: 'center' }}>{item.cantidad}</Text>
                     <Text style={{ fontSize: 13, width: 80, textAlign: 'right' }}>${(precio * item.cantidad).toLocaleString()}</Text>
                   </View>
-                 );
+                );
               })}
 
               <View style={{ borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 15, marginTop: 10 }}>
@@ -468,7 +468,7 @@ export default function PosScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 15 },
   rowLayout: { flexDirection: 'row', gap: 20 },
-  
+
   // --- CATÁLOGO ---
   catalogoSection: { flex: 1 },
   header: { marginBottom: 15 },

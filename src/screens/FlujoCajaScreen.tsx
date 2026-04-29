@@ -231,7 +231,7 @@ export default function FlujoCajaScreen() {
                 <View style={[styles.searchBox, {flex: 1, marginBottom: 0}]}>
                   <TextInput 
                     style={[styles.searchInput, {outlineStyle: 'none'} as any]} 
-                    type="date"
+                    {...{type: 'date'} as any}
                     placeholder="YYYY-MM-DD" 
                     value={fechaFiltro}
                     onChangeText={setFechaFiltro}
