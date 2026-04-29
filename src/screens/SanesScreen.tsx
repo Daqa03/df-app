@@ -116,7 +116,13 @@ export default function SanesScreen() {
     return abono;
   };
 
-  const abonoCOP = getEquivalenciaCOP();
+  let abonoCOP = getEquivalenciaCOP();
+  // Corrección de redondeo por conversión de moneda (tolerancia de 200 pesos)
+  if (sanSeleccionado && getCuentaSeleccionada()?.moneda !== 'COP') {
+    if (Math.abs(abonoCOP - sanSeleccionado.saldo_pendiente) < 200) {
+      abonoCOP = sanSeleccionado.saldo_pendiente;
+    }
+  }
 
   const registrarAbono = async () => {
     if (!sanSeleccionado) return;

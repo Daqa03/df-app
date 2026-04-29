@@ -115,7 +115,13 @@ export default function CuentasPorPagarScreen() {
     return pago;
   };
 
-  const pagoCOP = getEquivalenciaCOP();
+  let pagoCOP = getEquivalenciaCOP();
+  // Corrección de redondeo por conversión de moneda (tolerancia de 200 pesos)
+  if (deudaSeleccionada && getCuentaSeleccionada()?.moneda !== 'COP') {
+    if (Math.abs(pagoCOP - deudaSeleccionada.saldo_pendiente) < 200) {
+      pagoCOP = deudaSeleccionada.saldo_pendiente;
+    }
+  }
 
   const registrarPago = async () => {
     if (!deudaSeleccionada) return;
