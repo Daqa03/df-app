@@ -133,6 +133,16 @@ export default function CuentasPorPagarScreen() {
       return alert(`❌ ¡Error! El pago equivalente (${pagoCOP.toLocaleString()} COP) supera la deuda restante (${deudaSeleccionada.saldo_pendiente.toLocaleString()} COP).`);
     }
 
+    // Validación Opción B: Advertencia si no hay fondos suficientes
+    const cuenta = getCuentaSeleccionada();
+    if (cuenta && cuenta.saldo_actual !== undefined) {
+      const pagoEnMonedaOriginal = Number(montoPago);
+      if (cuenta.saldo_actual < pagoEnMonedaOriginal) {
+        const confirmar = window.confirm(`⚠️ ADVERTENCIA DE SALDO\n\nLa cuenta "${cuenta.nombre}" solo tiene ${cuenta.saldo_actual.toLocaleString()} ${cuenta.moneda}, pero estás intentando pagar ${pagoEnMonedaOriginal.toLocaleString()} ${cuenta.moneda}.\n\nSi continúas, el saldo quedará en negativo.\n\n¿Estás seguro de que deseas procesar el pago de todas formas?`);
+        if (!confirmar) return;
+      }
+    }
+
     setProcesando(true);
     try {
       const { error } = await supabase.from('pagos_cuentas_pagar').insert([{

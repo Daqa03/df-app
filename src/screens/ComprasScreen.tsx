@@ -251,6 +251,15 @@ export default function ComprasScreen() {
           if (cuentaSeleccionada.moneda === 'USD') montoFinal = total / tasaUSD;
           if (cuentaSeleccionada.moneda === 'VES') montoFinal = total / tasaVES;
 
+          // Validación Opción B: Advertencia si no hay fondos suficientes
+          if (cuentaSeleccionada.saldo_actual !== undefined && cuentaSeleccionada.saldo_actual < montoFinal) {
+            const proceed = window.confirm(`⚠️ ADVERTENCIA DE SALDO\n\nLa cuenta "${cuentaSeleccionada.nombre}" solo tiene ${cuentaSeleccionada.saldo_actual.toLocaleString()} ${cuentaSeleccionada.moneda}, pero esta compra requiere ${montoFinal.toLocaleString(undefined, {maximumFractionDigits: 2})} ${cuentaSeleccionada.moneda}.\n\nSi continúas, el saldo quedará en negativo.\n\n¿Estás seguro de que deseas procesar la compra de todas formas?`);
+            if (!proceed) {
+              setProcesandoCompra(false);
+              return;
+            }
+          }
+
           const detalleProductos = carrito.map(item => `${item.cantidad}x ${item.producto.nombre}`).join(', ');
           const desc = `Compra de Mercancía. Proveedor: ${proveedorSeleccionado.nombre}\nProductos: ${detalleProductos}`;
 

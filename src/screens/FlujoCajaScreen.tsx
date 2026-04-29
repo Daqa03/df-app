@@ -72,6 +72,14 @@ export default function FlujoCajaScreen() {
     if (!monto || isNaN(Number(monto)) || Number(monto) <= 0) return alert('Ingresa un monto válido mayor a 0');
     if (!cuentaSeleccionadaId) return alert('Selecciona una cuenta');
 
+    if (tipoMovimiento === 'Egreso') {
+      const cuenta = cuentas.find(c => c.id === cuentaSeleccionadaId);
+      if (cuenta && cuenta.saldo_actual !== undefined && cuenta.saldo_actual < Number(monto)) {
+        const proceed = window.confirm(`⚠️ ADVERTENCIA DE SALDO\n\nLa cuenta "${cuenta.nombre}" solo tiene ${cuenta.saldo_actual.toLocaleString()} ${cuenta.moneda}, pero estás intentando gastar ${Number(monto).toLocaleString()} ${cuenta.moneda}.\n\nSi continúas, el saldo quedará en negativo.\n\n¿Estás seguro de que deseas registrar este gasto de todas formas?`);
+        if (!proceed) return;
+      }
+    }
+
     setProcesando(true);
     try {
       const { error } = await supabase.from('movimientos_caja').insert([{
