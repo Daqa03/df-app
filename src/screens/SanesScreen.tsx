@@ -313,10 +313,17 @@ export default function SanesScreen() {
             </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-              <Text style={{fontSize: 14, color: '#4B5563', marginBottom: 20}}>
-                Cliente: <Text style={{fontWeight: 'bold'}}>{sanSeleccionado?.entidades?.nombre}</Text>{"\n"}
-                Deuda Restante: <Text style={{fontWeight: 'bold', color: '#DC2626'}}>${sanSeleccionado?.saldo_pendiente.toLocaleString()} COP</Text>
-              </Text>
+              <View style={{marginBottom: 20, backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB'}}>
+                <Text style={{fontSize: 14, color: '#4B5563', marginBottom: 5}}>
+                  Cliente: <Text style={{fontWeight: 'bold', color: '#1A1A1A'}}>{sanSeleccionado?.entidades?.nombre}</Text>
+                </Text>
+                <Text style={{fontSize: 14, color: '#4B5563', marginBottom: 5}}>
+                  Deuda Restante: <Text style={{fontWeight: 'bold', color: '#DC2626'}}>${sanSeleccionado?.saldo_pendiente.toLocaleString()} COP</Text>
+                </Text>
+                <Text style={{fontSize: 12, color: '#6B7280'}}>
+                  USD: ${(sanSeleccionado?.saldo_pendiente / tasaUSD).toFixed(2)}  |  VES: Bs.${(sanSeleccionado?.saldo_pendiente / tasaVES).toFixed(2)}
+                </Text>
+              </View>
 
               <Text style={styles.label}>¿A dónde ingresó este dinero? *</Text>
               <View style={styles.pillsContainer}>
@@ -333,12 +340,37 @@ export default function SanesScreen() {
 
               <Text style={styles.label}>Monto depositado en {getCuentaSeleccionada()?.moneda || ''} *</Text>
               <TextInput 
-                style={[styles.input, {outlineStyle: 'none'} as any]} 
+                style={[styles.input, {outlineStyle: 'none'} as any, {marginBottom: 10}]} 
                 placeholder="0.00" 
                 keyboardType="numeric"
                 value={montoAbono}
                 onChangeText={setMontoAbono}
               />
+              
+              <View style={{flexDirection: 'row', gap: 10, marginBottom: 15}}>
+                {[
+                  { label: 'Total', pct: 1 },
+                  { label: 'Mitad', pct: 0.5 },
+                  { label: 'Un cuarto', pct: 0.25 }
+                ].map(opcion => {
+                  const saldoCOP = sanSeleccionado?.saldo_pendiente || 0;
+                  const copValue = saldoCOP * opcion.pct;
+                  const isCOP = getCuentaSeleccionada()?.moneda === 'COP';
+                  const isUSD = getCuentaSeleccionada()?.moneda === 'USD';
+                  const finalVal = isCOP ? Math.round(copValue) : (isUSD ? copValue / tasaUSD : copValue / tasaVES);
+                  const displayVal = isCOP ? finalVal.toString() : finalVal.toFixed(2);
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={opcion.label}
+                      style={styles.quickPayBtn}
+                      onPress={() => setMontoAbono(displayVal)}
+                    >
+                      <Text style={styles.quickPayBtnText}>{opcion.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               {/* Muestra la conversión en tiempo real */}
               {montoAbono !== '' && getCuentaSeleccionada()?.moneda !== 'COP' && (
@@ -426,6 +458,9 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: '#6B0D23', borderColor: '#6B0D23' },
   pillText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
   pillTextActive: { color: '#FFF' },
+
+  quickPayBtn: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  quickPayBtnText: { fontSize: 12, fontWeight: 'bold', color: '#4B5563' },
 
   freqContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   freqPill: { paddingHorizontal: 15, paddingVertical: 10, backgroundColor: '#F3F4F6', borderRadius: 12 },

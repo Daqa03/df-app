@@ -299,10 +299,17 @@ export default function CuentasPorPagarScreen() {
             </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-              <Text style={{fontSize: 14, color: '#4B5563', marginBottom: 20}}>
-                Proveedor: <Text style={{fontWeight: 'bold'}}>{deudaSeleccionada?.entidades?.nombre}</Text>{"\n"}
-                Debemos: <Text style={{fontWeight: 'bold', color: '#DC2626'}}>${deudaSeleccionada?.saldo_pendiente.toLocaleString()} COP</Text>
-              </Text>
+              <View style={{marginBottom: 20, backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB'}}>
+                <Text style={{fontSize: 14, color: '#4B5563', marginBottom: 5}}>
+                  Proveedor: <Text style={{fontWeight: 'bold', color: '#1A1A1A'}}>{deudaSeleccionada?.entidades?.nombre}</Text>
+                </Text>
+                <Text style={{fontSize: 14, color: '#4B5563', marginBottom: 5}}>
+                  Debemos: <Text style={{fontWeight: 'bold', color: '#DC2626'}}>${deudaSeleccionada?.saldo_pendiente.toLocaleString()} COP</Text>
+                </Text>
+                <Text style={{fontSize: 12, color: '#6B7280'}}>
+                  USD: ${(deudaSeleccionada?.saldo_pendiente / tasaUSD).toFixed(2)}  |  VES: Bs.${(deudaSeleccionada?.saldo_pendiente / tasaVES).toFixed(2)}
+                </Text>
+              </View>
 
               <Text style={styles.label}>¿De qué cuenta salió el dinero? *</Text>
               <View style={styles.pillsContainer}>
@@ -319,12 +326,37 @@ export default function CuentasPorPagarScreen() {
 
               <Text style={styles.label}>Monto pagado en {getCuentaSeleccionada()?.moneda || ''} *</Text>
               <TextInput 
-                style={[styles.input, {outlineStyle: 'none'} as any]} 
+                style={[styles.input, {outlineStyle: 'none'} as any, {marginBottom: 10}]} 
                 placeholder="0.00" 
                 keyboardType="numeric"
                 value={montoPago}
                 onChangeText={setMontoPago}
               />
+              
+              <View style={{flexDirection: 'row', gap: 10, marginBottom: 15}}>
+                {[
+                  { label: 'Total', pct: 1 },
+                  { label: 'Mitad', pct: 0.5 },
+                  { label: 'Un cuarto', pct: 0.25 }
+                ].map(opcion => {
+                  const saldoCOP = deudaSeleccionada?.saldo_pendiente || 0;
+                  const copValue = saldoCOP * opcion.pct;
+                  const isCOP = getCuentaSeleccionada()?.moneda === 'COP';
+                  const isUSD = getCuentaSeleccionada()?.moneda === 'USD';
+                  const finalVal = isCOP ? Math.round(copValue) : (isUSD ? copValue / tasaUSD : copValue / tasaVES);
+                  const displayVal = isCOP ? finalVal.toString() : finalVal.toFixed(2);
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={opcion.label}
+                      style={styles.quickPayBtn}
+                      onPress={() => setMontoPago(displayVal)}
+                    >
+                      <Text style={styles.quickPayBtnText}>{opcion.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               {/* Conversión en tiempo real */}
               {montoPago !== '' && getCuentaSeleccionada()?.moneda !== 'COP' && (
@@ -412,6 +444,9 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
   pillText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
   pillTextActive: { color: '#FFF' },
+
+  quickPayBtn: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  quickPayBtnText: { fontSize: 12, fontWeight: 'bold', color: '#4B5563' },
 
   conversionBox: { backgroundColor: '#FEF3C7', padding: 12, borderRadius: 8, marginBottom: 15 },
   conversionText: { color: '#92400E', fontSize: 13 },
