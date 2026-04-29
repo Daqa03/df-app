@@ -278,6 +278,8 @@ export default function ComprasScreen() {
     </View>
   );
 
+  const productosFiltrados = productos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+
   return (
     <View style={[styles.container, isDesktop ? {flexDirection: 'row'} : {flexDirection: 'column'}]}>
       
