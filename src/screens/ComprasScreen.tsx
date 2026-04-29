@@ -36,6 +36,9 @@ export default function ComprasScreen() {
   const [modalCheckout, setModalCheckout] = useState(false);
   const [procesandoCompra, setProcesandoCompra] = useState(false);
 
+  // Móvil
+  const [carritoVisibleMovil, setCarritoVisibleMovil] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -191,7 +194,89 @@ export default function ComprasScreen() {
     }
   };
 
-  const productosFiltrados = productos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const PanelResumenCompra = () => (
+    <View style={[styles.rightPanel, {flex: 1}]}>
+      <Text style={styles.panelTitle}>Resumen de la Compra</Text>
+      
+      {/* Selector de Proveedor */}
+      <Text style={styles.labelSection}>Proveedor:</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.proveedoresScroll}>
+        {proveedores.map(prov => (
+          <TouchableOpacity 
+            key={prov.id} 
+            style={[styles.provPill, proveedorSeleccionado?.id === prov.id && styles.provPillActive]}
+            onPress={() => setProveedorSeleccionado(prov)}
+          >
+            <Text style={[styles.provPillText, proveedorSeleccionado?.id === prov.id && styles.provPillTextActive]}>
+              {prov.nombre}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <View style={styles.carritoContainer}>
+        {carrito.length === 0 ? (
+          <View style={styles.carritoEmpty}>
+            <Text style={{fontSize: 40, marginBottom: 10}}>🛒</Text>
+            <Text style={styles.emptyText}>No has agregado productos a esta compra</Text>
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {carrito.map(item => (
+              <View key={item.producto.id} style={styles.cartItem}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.cartItemName} numberOfLines={1}>{item.producto.nombre}</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5}}>
+                    <Text style={styles.costoLabel}>Costo c/u: $</Text>
+                    <TextInput 
+                      style={[styles.costoInput, {outlineStyle: 'none'} as any]}
+                      keyboardType="numeric"
+                      value={String(item.costo_unitario)}
+                      onChangeText={(val) => actualizarCosto(item.producto.id, val)}
+                    />
+                  </View>
+                </View>
+                
+                <View style={styles.qtyControls}>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, -1)}>
+                    <Text style={styles.qtyBtnText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.qtyText}>{item.cantidad}</Text>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, 1)}>
+                    <Text style={styles.qtyBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{alignItems: 'flex-end', minWidth: 80}}>
+                  <Text style={styles.cartItemTotal}>${(item.cantidad * item.costo_unitario).toLocaleString()}</Text>
+                  <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
+                    <Text style={styles.deleteText}>Quitar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      <View style={styles.checkoutFooter}>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Total a Pagar:</Text>
+          <Text style={styles.totalValue}>${calcularTotal().toLocaleString()}</Text>
+        </View>
+        <TouchableOpacity 
+          style={[styles.checkoutBtn, (carrito.length === 0 || !proveedorSeleccionado) && {backgroundColor: '#9CA3AF'}]}
+          disabled={carrito.length === 0 || !proveedorSeleccionado}
+          onPress={() => {
+            if (!isDesktop) setCarritoVisibleMovil(false);
+            setModalCheckout(true);
+          }}
+        >
+          <Text style={styles.checkoutBtnText}>Procesar Compra</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.container, isDesktop ? {flexDirection: 'row'} : {flexDirection: 'column'}]}>
@@ -218,7 +303,7 @@ export default function ComprasScreen() {
         {loading ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 50}}/> : (
           <ScrollView contentContainerStyle={styles.productosGrid} showsVerticalScrollIndicator={false}>
             {productosFiltrados.map(prod => (
-              <TouchableOpacity key={prod.id} style={styles.productoCard} onPress={() => agregarAlCarrito(prod)}>
+              <TouchableOpacity key={prod.id} style={[styles.productoCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
                 <View style={styles.productoIcon}>
                   <Text style={{fontSize: 24}}>📦</Text>
                 </View>
@@ -231,85 +316,29 @@ export default function ComprasScreen() {
         )}
       </View>
 
-      {/* PANEL DERECHO: Resumen de Compra */}
-      <View style={[styles.rightPanel, isDesktop && {flex: 1}]}>
-        <Text style={styles.panelTitle}>Resumen de la Compra</Text>
-        
-        {/* Selector de Proveedor */}
-        <Text style={styles.labelSection}>Proveedor:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.proveedoresScroll}>
-          {proveedores.map(prov => (
-            <TouchableOpacity 
-              key={prov.id} 
-              style={[styles.provPill, proveedorSeleccionado?.id === prov.id && styles.provPillActive]}
-              onPress={() => setProveedorSeleccionado(prov)}
-            >
-              <Text style={[styles.provPillText, proveedorSeleccionado?.id === prov.id && styles.provPillTextActive]}>
-                {prov.nombre}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      {/* PANEL DERECHO: Resumen de Compra (Escritorio) */}
+      {isDesktop && <PanelResumenCompra />}
 
-        <View style={styles.carritoContainer}>
-          {carrito.length === 0 ? (
-            <View style={styles.carritoEmpty}>
-              <Text style={{fontSize: 40, marginBottom: 10}}>🛒</Text>
-              <Text style={styles.emptyText}>No has agregado productos a esta compra</Text>
+      {/* BOTÓN FLOTANTE (Solo Móvil) */}
+      {!isDesktop && carrito.length > 0 && (
+        <TouchableOpacity style={styles.floatingCartBtn} onPress={() => setCarritoVisibleMovil(true)}>
+          <Text style={styles.floatingCartText}>🛒 Ver Carrito ({carrito.length}) - ${calcularTotal().toLocaleString()}</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* MODAL: TICKET MÓVIL */}
+      {!isDesktop && (
+        <Modal visible={carritoVisibleMovil} animationType="slide" transparent={true}>
+          <View style={styles.modalOverlaySlide}>
+            <View style={styles.mobileCartSheet}>
+              <TouchableOpacity style={styles.closeSheetBtn} onPress={() => setCarritoVisibleMovil(false)}>
+                <Text style={styles.closeSheetText}>Cerrar Carrito ⬇</Text>
+              </TouchableOpacity>
+              <PanelResumenCompra />
             </View>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {carrito.map(item => (
-                <View key={item.producto.id} style={styles.cartItem}>
-                  <View style={{flex: 1, marginRight: 10}}>
-                    <Text style={styles.cartItemName} numberOfLines={1}>{item.producto.nombre}</Text>
-                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5}}>
-                      <Text style={styles.costoLabel}>Costo c/u: $</Text>
-                      <TextInput 
-                        style={[styles.costoInput, {outlineStyle: 'none'} as any]}
-                        keyboardType="numeric"
-                        value={String(item.costo_unitario)}
-                        onChangeText={(val) => actualizarCosto(item.producto.id, val)}
-                      />
-                    </View>
-                  </View>
-                  
-                  <View style={styles.qtyControls}>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, -1)}>
-                      <Text style={styles.qtyBtnText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.qtyText}>{item.cantidad}</Text>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, 1)}>
-                      <Text style={styles.qtyBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={{alignItems: 'flex-end', minWidth: 80}}>
-                    <Text style={styles.cartItemTotal}>${(item.cantidad * item.costo_unitario).toLocaleString()}</Text>
-                    <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
-                      <Text style={styles.deleteText}>Quitar</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={styles.checkoutFooter}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total a Pagar:</Text>
-            <Text style={styles.totalValue}>${calcularTotal().toLocaleString()}</Text>
           </View>
-          <TouchableOpacity 
-            style={[styles.checkoutBtn, (carrito.length === 0 || !proveedorSeleccionado) && {backgroundColor: '#9CA3AF'}]}
-            disabled={carrito.length === 0 || !proveedorSeleccionado}
-            onPress={() => setModalCheckout(true)}
-          >
-            <Text style={styles.checkoutBtnText}>Procesar Compra</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        </Modal>
+      )}
 
       {/* --- MODAL CREAR NUEVO PRODUCTO --- */}
       <Modal visible={modalNuevoProducto} transparent={true} animationType="fade">
@@ -457,5 +486,13 @@ const styles = StyleSheet.create({
   cancelBtn: { flex: 1, padding: 15, borderRadius: 12, alignItems: 'center', backgroundColor: '#F3F4F6' },
   cancelBtnText: { color: '#4B5563', fontWeight: 'bold' },
   confirmBtn: { flex: 1.5, padding: 15, borderRadius: 12, alignItems: 'center', backgroundColor: '#6B0D23' },
-  confirmBtnText: { color: '#FFF', fontWeight: 'bold' }
+  confirmBtnText: { color: '#FFF', fontWeight: 'bold' },
+
+  // --- ELEMENTOS MÓVILES ---
+  floatingCartBtn: { position: 'absolute', bottom: 20, left: 20, right: 20, backgroundColor: '#1A1A1A', padding: 16, borderRadius: 16, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10 },
+  floatingCartText: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
+  modalOverlaySlide: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  mobileCartSheet: { backgroundColor: '#FAF8F5', height: '85%', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 15, paddingBottom: 30, overflow: 'hidden' },
+  closeSheetBtn: { alignItems: 'center', paddingBottom: 15 },
+  closeSheetText: { color: '#6B7280', fontWeight: 'bold', fontSize: 14 }
 });
