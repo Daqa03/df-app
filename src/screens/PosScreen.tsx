@@ -223,7 +223,8 @@ export default function PosScreen() {
           carrito.map((item) => (
             <View key={item.producto.id} style={styles.cartItem}>
               <View style={{flex: 1}}>
-                <Text style={styles.cartItemName} numberOfLines={1}>[{item.producto.codigo_sku || 'S/F'}] {item.producto.nombre}</Text>
+                {item.producto.codigo_sku ? <Text style={styles.skuText}>[{item.producto.codigo_sku}]</Text> : null}
+                <Text style={styles.cartItemName} numberOfLines={1}>{item.producto.nombre}</Text>
                 <View style={styles.priceTypeRow}>
                   <TouchableOpacity style={[styles.priceTypeBtn, item.tipoPrecio === 'detal' && styles.priceTypeActive]} onPress={() => cambiarTipoPrecio(item.producto.id, 'detal')}>
                     <Text style={[styles.priceTypeText, item.tipoPrecio === 'detal' && styles.priceTypeTextActive]}>Detal</Text>
@@ -277,7 +278,8 @@ export default function PosScreen() {
               <TouchableOpacity key={prod.id} style={[styles.prodCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
                 <Image source={{ uri: prod.imagen_url || 'https://via.placeholder.com/150?text=S/F' }} style={styles.prodImg} />
                 <View style={styles.prodInfo}>
-                  <Text style={styles.prodName} numberOfLines={2}>[{prod.codigo_sku || 'S/F'}] {prod.nombre}</Text>
+                  {prod.codigo_sku ? <Text style={styles.skuText}>[{prod.codigo_sku}]</Text> : null}
+                  <Text style={styles.prodName} numberOfLines={2}>{prod.nombre}</Text>
                   <Text style={styles.prodPrice}>${prod.precio_detal_cop.toLocaleString()}</Text>
                   <Text style={styles.prodStock}>Stock: {prod.stock_actual}</Text>
                 </View>
@@ -394,6 +396,7 @@ const styles = StyleSheet.create({
   prodCard: { backgroundColor: '#FFF', width: 140, borderRadius: 16, overflow: 'hidden', elevation: 2, shadowOpacity: 0.05 },
   prodImg: { width: '100%', height: 100, backgroundColor: '#F3F4F6' },
   prodInfo: { padding: 10 },
+  skuText: { fontSize: 11, color: '#9CA3AF', fontWeight: 'bold', marginBottom: 2 },
   prodName: { fontSize: 12, fontWeight: '600', color: '#374151', height: 32, marginBottom: 5 },
   prodPrice: { fontSize: 13, fontWeight: 'bold', color: '#6B0D23' },
   prodStock: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },

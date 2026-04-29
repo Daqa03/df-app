@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, useWindowDimensions, Modal } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, useWindowDimensions, Modal, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../supabase';
 
 type Producto = any;
@@ -31,6 +32,7 @@ export default function ComprasScreen() {
   const [nCosto, setNCosto] = useState('');
   const [nPrecioDetal, setNPrecioDetal] = useState('');
   const [nPrecioMayor, setNPrecioMayor] = useState('');
+  const [nImagenUri, setNImagenUri] = useState<string | null>(null);
   const [procesandoNuevo, setProcesandoNuevo] = useState(false);
 
   // Modal Checkout
@@ -98,21 +100,39 @@ export default function ComprasScreen() {
     return carrito.reduce((sum, item) => sum + (item.cantidad * item.costo_unitario), 0);
   };
 
+  const seleccionarFotoNuevo = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.5 });
+    if (!result.canceled) setNImagenUri(result.assets[0].uri);
+  };
+
   const crearNuevoProducto = async () => {
-    if (!nNombre || !nCategoria || !nCosto || !nPrecioDetal || !nPrecioMayor) {
-      return alert('Por favor llena todos los campos.');
+    if (!nSku || !nNombre || !nCosto || !nPrecioDetal || !nPrecioMayor) {
+      return alert('Por favor llena todos los campos obligatorios.');
     }
 
     setProcesandoNuevo(true);
     try {
+      let imageUrlFinal = null;
+      if (nImagenUri) {
+        const response = await fetch(nImagenUri); 
+        const blob = await response.blob(); 
+        const fileName = `nuevo-${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
+        if (!uploadError) { 
+          const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); 
+          imageUrlFinal = data.publicUrl; 
+        }
+      }
+
       const payload = {
         nombre: nNombre,
         codigo_sku: nSku,
-        categoria: nCategoria,
+        categoria: 'General', // Default ya que se eliminó el campo
         costo_cop: Number(nCosto),
         precio_detal_cop: Number(nPrecioDetal),
         precio_mayor_cop: Number(nPrecioMayor),
-        stock_actual: 0 // Se suma al finalizar la compra
+        stock_actual: 0, // Se suma al finalizar la compra
+        imagen_url: imageUrlFinal
       };
 
       const { data, error } = await supabase.from('productos').insert([payload]).select().single();
@@ -120,7 +140,7 @@ export default function ComprasScreen() {
 
       alert('Producto creado y agregado a la compra.');
       setModalNuevoProducto(false);
-      setNNombre(''); setNSku(''); setNCategoria(''); setNCosto(''); setNPrecioDetal(''); setNPrecioMayor('');
+      setNNombre(''); setNSku(''); setNCosto(''); setNPrecioDetal(''); setNPrecioMayor(''); setNImagenUri(null);
       
       // Actualizar lista local y agregar al carrito
       setProductos([...productos, data]);
@@ -227,7 +247,10 @@ export default function ComprasScreen() {
             {carrito.map(item => (
               <View key={item.producto.id} style={styles.cartItem}>
                 <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start'}}>
-                  <Text style={[styles.cartItemName, {flex: 1, marginRight: 10}]} numberOfLines={2}>[{item.producto.codigo_sku || 'S/F'}] {item.producto.nombre}</Text>
+                  <View style={{flex: 1, marginRight: 10}}>
+                    {item.producto.codigo_sku ? <Text style={styles.skuText}>[{item.producto.codigo_sku}]</Text> : null}
+                    <Text style={styles.cartItemName} numberOfLines={2}>{item.producto.nombre}</Text>
+                  </View>
                   <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
                     <Text style={styles.deleteText}>Quitar</Text>
                   </TouchableOpacity>
@@ -313,11 +336,14 @@ export default function ComprasScreen() {
             {productosFiltrados.map(prod => (
               <TouchableOpacity key={prod.id} style={[styles.productoCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
                 <View style={styles.productoIcon}>
-                  <Text style={{fontSize: 24}}>📦</Text>
+                  {prod.imagen_url ? (
+                    <Image source={{uri: prod.imagen_url}} style={{width: 50, height: 50, borderRadius: 8}} />
+                  ) : (
+                    <Text style={{fontSize: 24}}>📦</Text>
+                  )}
                 </View>
-                <Text style={styles.productoNombre} numberOfLines={2}>[{prod.codigo_sku || 'S/F'}] {prod.nombre}</Text>
-                <Text style={styles.productoCategoria}>{prod.categoria}</Text>
-                <Text style={styles.productoStock}>Stock: {prod.stock_actual}</Text>
+                {prod.codigo_sku ? <Text style={styles.skuText}>[{prod.codigo_sku}]</Text> : null}
+                <Text style={styles.productoNombre} numberOfLines={2}>{prod.nombre}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -358,14 +384,24 @@ export default function ComprasScreen() {
             </View>
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
               
-              <Text style={styles.inputLabel}>Nombre del Producto *</Text>
-              <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nNombre} onChangeText={setNNombre} placeholder="Ej. Paleta de Sombras" />
+              <View style={{alignItems: 'center', marginBottom: 20}}>
+                <TouchableOpacity onPress={seleccionarFotoNuevo} style={styles.imageEditBtn}>
+                  {nImagenUri ? (
+                    <Image source={{ uri: nImagenUri }} style={styles.imageEditPreview} />
+                  ) : (
+                    <View style={styles.imageEditPlaceholder}>
+                      <Text style={{fontSize: 30}}>📷</Text>
+                    </View>
+                  )}
+                  <Text style={styles.imageEditText}>Añadir Foto</Text>
+                </TouchableOpacity>
+              </View>
 
-              <Text style={styles.inputLabel}>Código SKU (Opcional)</Text>
+              <Text style={styles.inputLabel}>Código SKU *</Text>
               <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nSku} onChangeText={setNSku} placeholder="Ej. PB-001" />
 
-              <Text style={styles.inputLabel}>Categoría *</Text>
-              <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nCategoria} onChangeText={setNCategoria} placeholder="Ej. Ojos, Rostro" />
+              <Text style={styles.inputLabel}>Nombre del Producto *</Text>
+              <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nNombre} onChangeText={setNNombre} placeholder="Ej. Paleta de Sombras" />
 
               <Text style={styles.inputLabel}>Costo de Compra (Lo que te costó) COP *</Text>
               <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nCosto} onChangeText={setNCosto} keyboardType="numeric" placeholder="0.00" />
@@ -439,10 +475,9 @@ const styles = StyleSheet.create({
   
   productosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingBottom: 50 },
   productoCard: { backgroundColor: '#FFF', width: 160, padding: 15, borderRadius: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, borderWidth: 1, borderColor: '#F3F4F6' },
-  productoIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  productoNombre: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A', textAlign: 'center', marginBottom: 5 },
-  productoCategoria: { fontSize: 11, color: '#6B7280', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginBottom: 5 },
-  productoStock: { fontSize: 12, fontWeight: 'bold', color: '#10B981' },
+  productoIcon: { width: 50, height: 50, backgroundColor: '#FAF8F5', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 10, alignSelf: 'flex-start' },
+  skuText: { fontSize: 11, color: '#9CA3AF', fontWeight: 'bold', marginBottom: 2 },
+  productoNombre: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 5 },
 
   panelTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 15 },
   labelSection: { fontSize: 13, fontWeight: 'bold', color: '#4B5563', marginBottom: 10 },
@@ -488,8 +523,12 @@ const styles = StyleSheet.create({
   closeBtn: { fontSize: 20, color: '#9CA3AF', fontWeight: 'bold' },
   modalContent: { padding: 20 },
   inputLabel: { fontSize: 13, fontWeight: 'bold', color: '#374151', marginBottom: 8, marginTop: 10 },
-  inputField: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 15 },
-  infoBox: { backgroundColor: '#DBEAFE', padding: 15, borderRadius: 12, marginTop: 20 },
+  inputField: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 15 },
+  imageEditBtn: { alignItems: 'center', justifyContent: 'center' },
+  imageEditPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderStyle: 'dashed' },
+  imageEditPreview: { width: 100, height: 100, borderRadius: 50, borderWidth: 1, borderColor: '#E5E7EB' },
+  imageEditText: { fontSize: 12, color: '#6B0D23', fontWeight: 'bold', marginTop: 8 },
+  infoBox: { backgroundColor: '#EFF6FF', padding: 15, borderRadius: 12, marginTop: 10 },
   infoText: { color: '#1E40AF', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   modalSubmitBtn: { backgroundColor: '#10B981', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 20, marginBottom: 20 },
   modalSubmitBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
