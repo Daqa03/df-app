@@ -190,7 +190,6 @@ export default function ListaProductosScreen() {
           </View>
           <Text style={styles.compactPrice}>D: ${item.precio_detal_cop.toLocaleString()}</Text>
           <View style={styles.actionButtonGroup}>
-            <TouchableOpacity onPress={() => abrirModalReabastecer(item)} style={styles.reabastecerBtn}><Text style={styles.reabastecerText}>📦 Ingresar</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => activarEdicion(item)} style={styles.miniAction}><Text style={{color: '#6B0D23', fontWeight: 'bold'}}>Editar</Text></TouchableOpacity>
           </View>
         </View>
@@ -215,9 +214,6 @@ export default function ListaProductosScreen() {
             <Text style={styles.stockText}>Stock: {item.stock_actual}</Text>
             {/* AQUÍ ESTÁ LA CORRECCIÓN: Usamos un estilo apilado si es móvil */}
             <View style={isMobile ? styles.actionButtonGroupStacked : styles.actionButtonGroupRow}>
-              <TouchableOpacity onPress={() => abrirModalReabastecer(item)} style={styles.reabastecerBtnLg}>
-                <Text style={styles.reabastecerTextLg}>📦 Ingresar</Text>
-              </TouchableOpacity>
               <TouchableOpacity onPress={() => activarEdicion(item)} style={styles.editCircle}>
                 <Text style={styles.actionText}>Editar</Text>
               </TouchableOpacity>
@@ -239,7 +235,6 @@ export default function ListaProductosScreen() {
           <Text style={styles.prodName} numberOfLines={1}>{item.nombre}</Text>
           <Text style={styles.price}>D: ${item.precio_detal_cop.toLocaleString()}</Text>
           <View style={styles.gridActions}>
-            <TouchableOpacity onPress={() => abrirModalReabastecer(item)} style={styles.reabastecerBtn}><Text style={styles.reabastecerText}>📦 Ingresar</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => activarEdicion(item)}><Text style={styles.actionText}>Editar</Text></TouchableOpacity>
           </View>
         </View>
@@ -261,7 +256,6 @@ export default function ListaProductosScreen() {
           <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}><Text style={styles.addBtnText}>+ Nuevo</Text></TouchableOpacity>
       </View>
 
       {loading && <ActivityIndicator size="large" color="#6B0D23" style={{ marginVertical: 20 }} />}
