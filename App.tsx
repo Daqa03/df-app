@@ -11,8 +11,7 @@ import FlujoCajaScreen from './src/screens/FlujoCajaScreen';
 import DirectorioScreen from './src/screens/DirectorioScreen';
 import SanesScreen from './src/screens/SanesScreen';
 import CuentasPorPagarScreen from './src/screens/CuentasPorPagarScreen';
-
-// Pantalla de Login (puedes mantener la que ya teníamos)
+import LoginScreen from './src/screens/LoginScreen';
 
 export default function App() {
   const { width } = useWindowDimensions();
@@ -28,8 +27,7 @@ export default function App() {
   }, []);
 
   if (!session) {
-    // Aquí va tu componente de Login moderno que ya creamos
-    return <View><Text>Login Component...</Text></View>; 
+    return <LoginScreen />;
   }
 
   const NavegacionLateral = () => (
