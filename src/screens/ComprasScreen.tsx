@@ -24,6 +24,12 @@ export default function ComprasScreen() {
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState<Entidad | null>(null);
 
+  // Estados para Cuentas de Pago
+  const [cuentas, setCuentas] = useState<any[]>([]);
+  const [tasaUSD, setTasaUSD] = useState(1);
+  const [tasaVES, setTasaVES] = useState(1);
+  const [metodoPagoSeleccionadoId, setMetodoPagoSeleccionadoId] = useState('credito'); // Por defecto, Deuda
+
   // Modal Nuevo Producto
   const [modalNuevoProducto, setModalNuevoProducto] = useState(false);
   const [nNombre, setNNombre] = useState('');
@@ -62,6 +68,19 @@ export default function ComprasScreen() {
     // Cargar proveedores (Entidades tipo 'Proveedor')
     const { data: provData } = await supabase.from('entidades').select('*').eq('tipo', 'Proveedor').order('nombre');
     if (provData) setProveedores(provData);
+    
+    // Cargar cuentas activas
+    const { data: cuenData } = await supabase.from('cuentas').select('*').eq('activo', true).neq('tipo', 'DEUDA');
+    if (cuenData) setCuentas(cuenData);
+
+    // Cargar tasas
+    const { data: tasasData } = await supabase.from('tasas_cambio').select('*');
+    if (tasasData) {
+      const usd = tasasData.find(t => t.moneda === 'USD');
+      const ves = tasasData.find(t => t.moneda === 'VES');
+      if (usd) setTasaUSD(usd.tasa_en_cop || 1);
+      if (ves) setTasaVES(ves.tasa_en_cop || 1);
+    }
     
     setLoading(false);
   };
@@ -216,14 +235,34 @@ export default function ComprasScreen() {
       const { error: errItems } = await supabase.from('compras_items').insert(itemsPayload);
       if (errItems) throw errItems;
 
-      // 3. Crear Deuda en Cuentas por Pagar
-      const { error: errDeuda } = await supabase.from('cuentas_por_pagar').insert([{
-        entidad_id: proveedorSeleccionado.id,
-        monto_total: total,
-        saldo_pendiente: total,
-        estado: 'ACTIVA'
-      }]);
-      if (errDeuda) throw errDeuda;
+      // 3. Crear Deuda o Egreso
+      if (metodoPagoSeleccionadoId === 'credito') {
+        const { error: errDeuda } = await supabase.from('cuentas_por_pagar').insert([{
+          entidad_id: proveedorSeleccionado.id,
+          monto_total: total,
+          saldo_pendiente: total,
+          estado: 'ACTIVA'
+        }]);
+        if (errDeuda) throw errDeuda;
+      } else {
+        const cuentaSeleccionada = cuentas.find(c => c.id === metodoPagoSeleccionadoId);
+        if (cuentaSeleccionada) {
+          let montoFinal = total;
+          if (cuentaSeleccionada.moneda === 'USD') montoFinal = total / tasaUSD;
+          if (cuentaSeleccionada.moneda === 'VES') montoFinal = total / tasaVES;
+
+          const detalleProductos = carrito.map(item => `${item.cantidad}x ${item.producto.nombre}`).join(', ');
+          const desc = `Compra de Mercancía. Proveedor: ${proveedorSeleccionado.nombre}\nProductos: ${detalleProductos}`;
+
+          const { error: errCaja } = await supabase.from('movimientos_caja').insert([{
+            cuenta_id: cuentaSeleccionada.id,
+            tipo_movimiento: 'Egreso',
+            monto: montoFinal,
+            descripcion: desc
+          }]);
+          if (errCaja) throw errCaja;
+        }
+      }
 
       // 4. Actualizar Stock y Costos en Productos
       // (Supabase no tiene upsert masivo nativo para update con calculos, lo hacemos uno por uno)
@@ -486,8 +525,33 @@ export default function ComprasScreen() {
             <Text style={{fontSize: 50, textAlign: 'center', marginBottom: 10}}>📦</Text>
             <Text style={styles.modalTitleCenter}>Confirmar Compra</Text>
             <Text style={styles.checkoutDesc}>
-              Se agregará el stock al inventario y se registrará una deuda de <Text style={{fontWeight: 'bold'}}>${calcularTotal().toLocaleString()}</Text> a nombre del proveedor <Text style={{fontWeight: 'bold'}}>{proveedorSeleccionado?.nombre}</Text> en Cuentas por Pagar.
+              Se agregará el stock al inventario por un valor total de <Text style={{fontWeight: 'bold'}}>${calcularTotal().toLocaleString()} COP</Text>.
             </Text>
+
+            <View style={{width: '100%', marginTop: 20}}>
+              <Text style={{fontWeight: 'bold', marginBottom: 10, color: '#374151'}}>¿Cómo vas a pagar esta compra?</Text>
+              
+              <View style={styles.pillsContainer}>
+                <TouchableOpacity 
+                  style={[styles.paymentPill, metodoPagoSeleccionadoId === 'credito' && styles.paymentPillActive]}
+                  onPress={() => setMetodoPagoSeleccionadoId('credito')}
+                >
+                  <Text style={[styles.paymentPillText, metodoPagoSeleccionadoId === 'credito' && styles.paymentPillTextActive]}>❌ A Crédito (Crear Deuda)</Text>
+                </TouchableOpacity>
+
+                {cuentas.map(c => (
+                  <TouchableOpacity 
+                    key={c.id} 
+                    style={[styles.paymentPill, metodoPagoSeleccionadoId === c.id && styles.paymentPillActive]}
+                    onPress={() => setMetodoPagoSeleccionadoId(c.id)}
+                  >
+                    <Text style={[styles.paymentPillText, metodoPagoSeleccionadoId === c.id && styles.paymentPillTextActive]}>
+                      💰 {c.nombre} ({c.moneda})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
             {procesandoCompra ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 20}} /> : (
               <View style={{flexDirection: 'row', gap: 10, marginTop: 20}}>
@@ -625,5 +689,12 @@ const styles = StyleSheet.create({
   modalOverlaySlide: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   mobileCartSheet: { backgroundColor: '#FAF8F5', height: '85%', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 15, paddingBottom: 30, overflow: 'hidden' },
   closeSheetBtn: { alignItems: 'center', paddingBottom: 15 },
-  closeSheetText: { color: '#6B7280', fontWeight: 'bold', fontSize: 14 }
+  closeSheetText: { color: '#6B7280', fontWeight: 'bold', fontSize: 14 },
+
+  // Pills de Pagos
+  pillsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 15 },
+  paymentPill: { paddingHorizontal: 15, paddingVertical: 10, backgroundColor: '#F3F4F6', borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  paymentPillActive: { backgroundColor: '#6B0D23', borderColor: '#6B0D23' },
+  paymentPillText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
+  paymentPillTextActive: { color: '#FFF' }
 });
