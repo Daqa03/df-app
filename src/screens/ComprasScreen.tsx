@@ -26,6 +26,7 @@ export default function ComprasScreen() {
   // Modal Nuevo Producto
   const [modalNuevoProducto, setModalNuevoProducto] = useState(false);
   const [nNombre, setNNombre] = useState('');
+  const [nSku, setNSku] = useState('');
   const [nCategoria, setNCategoria] = useState('');
   const [nCosto, setNCosto] = useState('');
   const [nPrecioDetal, setNPrecioDetal] = useState('');
@@ -106,6 +107,7 @@ export default function ComprasScreen() {
     try {
       const payload = {
         nombre: nNombre,
+        codigo_sku: nSku,
         categoria: nCategoria,
         costo_cop: Number(nCosto),
         precio_detal_cop: Number(nPrecioDetal),
@@ -118,7 +120,7 @@ export default function ComprasScreen() {
 
       alert('Producto creado y agregado a la compra.');
       setModalNuevoProducto(false);
-      setNNombre(''); setNCategoria(''); setNCosto(''); setNPrecioDetal(''); setNPrecioMayor('');
+      setNNombre(''); setNSku(''); setNCategoria(''); setNCosto(''); setNPrecioDetal(''); setNPrecioMayor('');
       
       // Actualizar lista local y agregar al carrito
       setProductos([...productos, data]);
@@ -225,7 +227,7 @@ export default function ComprasScreen() {
             {carrito.map(item => (
               <View key={item.producto.id} style={styles.cartItem}>
                 <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start'}}>
-                  <Text style={[styles.cartItemName, {flex: 1, marginRight: 10}]} numberOfLines={2}>{item.producto.nombre}</Text>
+                  <Text style={[styles.cartItemName, {flex: 1, marginRight: 10}]} numberOfLines={2}>[{item.producto.codigo_sku || 'S/F'}] {item.producto.nombre}</Text>
                   <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
                     <Text style={styles.deleteText}>Quitar</Text>
                   </TouchableOpacity>
@@ -279,7 +281,10 @@ export default function ComprasScreen() {
     </View>
   );
 
-  const productosFiltrados = productos.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const productosFiltrados = productos.filter(p => 
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+    (p.codigo_sku && p.codigo_sku.toLowerCase().includes(busqueda.toLowerCase()))
+  );
 
   return (
     <View style={[styles.container, isDesktop ? {flexDirection: 'row'} : {flexDirection: 'column'}]}>
@@ -310,7 +315,7 @@ export default function ComprasScreen() {
                 <View style={styles.productoIcon}>
                   <Text style={{fontSize: 24}}>📦</Text>
                 </View>
-                <Text style={styles.productoNombre} numberOfLines={2}>{prod.nombre}</Text>
+                <Text style={styles.productoNombre} numberOfLines={2}>[{prod.codigo_sku || 'S/F'}] {prod.nombre}</Text>
                 <Text style={styles.productoCategoria}>{prod.categoria}</Text>
                 <Text style={styles.productoStock}>Stock: {prod.stock_actual}</Text>
               </TouchableOpacity>
@@ -355,6 +360,9 @@ export default function ComprasScreen() {
               
               <Text style={styles.inputLabel}>Nombre del Producto *</Text>
               <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nNombre} onChangeText={setNNombre} placeholder="Ej. Paleta de Sombras" />
+
+              <Text style={styles.inputLabel}>Código SKU (Opcional)</Text>
+              <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nSku} onChangeText={setNSku} placeholder="Ej. PB-001" />
 
               <Text style={styles.inputLabel}>Categoría *</Text>
               <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={nCategoria} onChangeText={setNCategoria} placeholder="Ej. Ojos, Rostro" />
