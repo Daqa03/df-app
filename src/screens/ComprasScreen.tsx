@@ -416,7 +416,7 @@ export default function ComprasScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', width: '100%', maxWidth: 1400, marginHorizontal: 'auto' },
-  leftPanel: { padding: 20, backgroundColor: '#FAF8F5' },
+  leftPanel: { padding: 20, backgroundColor: '#FAF8F5', flex: 1 },
   rightPanel: { padding: 20, backgroundColor: '#FFF', elevation: 5, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 15 },
