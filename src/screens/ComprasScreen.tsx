@@ -503,6 +503,33 @@ export default function ComprasScreen() {
         </View>
       </Modal>
 
+      {/* --- MODAL EDITAR PRECIOS --- */}
+      <Modal visible={modalPrecios} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>✏️ Editar Precios de Venta</Text>
+              <TouchableOpacity onPress={() => setModalPrecios(false)}><Text style={styles.closeBtn}>✕</Text></TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <Text style={{marginBottom: 15, fontWeight: 'bold', color: '#1A1A1A'}}>{productoEdicion?.nombre}</Text>
+
+              <Text style={styles.inputLabel}>Precio Detal (COP) *</Text>
+              <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={precioDetalEdit} onChangeText={setPrecioDetalEdit} keyboardType="numeric" />
+
+              <Text style={styles.inputLabel}>Precio Mayor (COP) *</Text>
+              <TextInput style={[styles.inputField, {outlineStyle:'none'} as any]} value={precioMayorEdit} onChangeText={setPrecioMayorEdit} keyboardType="numeric" />
+
+              {guardandoPrecios ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 20}} /> : (
+                <TouchableOpacity style={styles.modalSubmitBtn} onPress={guardarPreciosVenta}>
+                  <Text style={styles.modalSubmitBtnText}>Guardar Cambios</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
