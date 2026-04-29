@@ -15,6 +15,7 @@ export default function ListaProductosScreen() {
   // --- PAGINACIÓN Y BÚSQUEDA ---
   const [busqueda, setBusqueda] = useState('');
   const [filtroOrden, setFiltroOrden] = useState('nombre_asc');
+  const [filtrosVisibles, setFiltrosVisibles] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 12;
@@ -266,37 +267,61 @@ export default function ListaProductosScreen() {
       </View>
       
       <View style={styles.toolbar}>
-        <TextInput 
-          style={[styles.searchInput, {outlineStyle: 'none'} as any, isMobile ? {width: '100%', marginBottom: 10} : {width: 250}]} 
-          placeholder="🔍 Buscar producto..." 
-          value={busqueda}
-          onChangeText={(text) => { setBusqueda(text); setPaginaActual(1); }}
-        />
-        
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortFiltersContainer}>
-          {[
-            { id: 'nombre_asc', label: 'A-Z' },
-            { id: 'nombre_desc', label: 'Z-A' },
-            { id: 'stock_desc', label: '+ Stock' },
-            { id: 'stock_asc', label: '- Stock' },
-            { id: 'sku_asc', label: 'SKU Asc' },
-            { id: 'sku_desc', label: 'SKU Desc' },
-          ].map(f => (
-            <TouchableOpacity 
-              key={f.id} 
-              style={[styles.sortPill, filtroOrden === f.id && styles.sortPillActive]} 
-              onPress={() => { setFiltroOrden(f.id); setPaginaActual(1); }}
-            >
-              <Text style={[styles.sortPillText, filtroOrden === f.id && styles.sortPillTextActive]}>{f.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.toolbarRow}>
+          <TextInput 
+            style={[styles.searchInput, {outlineStyle: 'none'} as any, isMobile ? {flex: 1, marginRight: 10} : {width: 250}]} 
+            placeholder="🔍 Buscar producto..." 
+            value={busqueda}
+            onChangeText={(text) => { setBusqueda(text); setPaginaActual(1); }}
+          />
+          
+          <TouchableOpacity 
+            style={styles.btnFiltroToggle} 
+            onPress={() => setFiltrosVisibles(!filtrosVisibles)}
+          >
+            <Text style={styles.btnFiltroToggleText}>Filtros {filtrosVisibles ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
 
-        <View style={styles.viewToggles}>
-          <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
+          {!isMobile && (
+            <View style={styles.viewTogglesDesktop}>
+              <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
+            </View>
+          )}
         </View>
+
+        {filtrosVisibles && (
+          <View style={styles.accordionContainer}>
+            <Text style={styles.accordionTitle}>Ordenar por:</Text>
+            <View style={styles.pillsWrapContainer}>
+              {[
+                { id: 'nombre_asc', label: 'A-Z' },
+                { id: 'nombre_desc', label: 'Z-A' },
+                { id: 'stock_desc', label: '+ Stock' },
+                { id: 'stock_asc', label: '- Stock' },
+                { id: 'sku_asc', label: 'SKU Asc' },
+                { id: 'sku_desc', label: 'SKU Desc' },
+              ].map(f => (
+                <TouchableOpacity 
+                  key={f.id} 
+                  style={[styles.sortPill, filtroOrden === f.id && styles.sortPillActive]} 
+                  onPress={() => { setFiltroOrden(f.id); setPaginaActual(1); }}
+                >
+                  <Text style={[styles.sortPillText, filtroOrden === f.id && styles.sortPillTextActive]}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {isMobile && (
+          <View style={styles.viewTogglesMobile}>
+            <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {loading && <ActivityIndicator size="large" color="#6B0D23" style={{ marginVertical: 20 }} />}
@@ -385,17 +410,28 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: '#1A1A1A' },
   subtitle: { fontSize: 14, color: '#6B7280' },
   
-  toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15, marginBottom: 20, flexWrap: 'wrap', gap: 15 },
+  // Toolbar styles
+  toolbar: { paddingHorizontal: 15, marginBottom: 20 },
+  toolbarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
   searchInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 15, height: 45, fontSize: 14, elevation: 1 },
-  sortFiltersContainer: { flex: 1, maxHeight: 45, paddingVertical: 2 },
-  sortPill: { backgroundColor: '#F3F4F6', paddingHorizontal: 15, justifyContent: 'center', borderRadius: 20, marginRight: 10, borderWidth: 1, borderColor: '#E5E7EB' },
-  sortPillActive: { backgroundColor: '#6B0D23', borderColor: '#6B0D23' },
-  sortPillText: { fontSize: 12, color: '#4B5563', fontWeight: 'bold' },
-  sortPillTextActive: { color: '#FFF' },
-  viewToggles: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 12, padding: 4 },
+  
+  btnFiltroToggle: { backgroundColor: '#F3F4F6', height: 45, paddingHorizontal: 15, borderRadius: 12, justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  btnFiltroToggleText: { fontSize: 14, fontWeight: 'bold', color: '#4B5563' },
+
+  viewTogglesDesktop: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 12, padding: 4, marginLeft: 'auto' },
+  viewTogglesMobile: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 12, padding: 4, marginTop: 15, alignSelf: 'flex-end' },
   viewBtn: { padding: 8, borderRadius: 8 },
   viewBtnActive: { backgroundColor: '#FFF' },
+
+  accordionContainer: { marginTop: 15, backgroundColor: '#FFF', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  accordionTitle: { fontSize: 13, fontWeight: 'bold', color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' },
+  pillsWrapContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   
+  sortPill: { backgroundColor: '#F3F4F6', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  sortPillActive: { backgroundColor: '#6B0D23', borderColor: '#6B0D23' },
+  sortPillText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
+  sortPillTextActive: { color: '#FFF' },
+
   addBtn: { backgroundColor: '#6B0D23', paddingHorizontal: 15, height: 45, justifyContent: 'center', borderRadius: 12, elevation: 2 },
   addBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   emptyText: { textAlign: 'center', marginTop: 40, color: '#6B7280', fontSize: 16 },
