@@ -210,6 +210,78 @@ export default function PosScreen() {
     }
   };
 
+  const imprimirRecibo = () => {
+    const html = `
+      <html>
+        <head>
+          <title>Recibo de Venta - D&F COSMETICS</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: auto; color: #1a1a1a; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+            .subtitle { color: #666; font-size: 12px; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+            .bold { font-weight: bold; }
+            .border-bottom { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+            .border-top { border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .col-1 { flex: 2; padding-right: 10px; }
+            .col-2 { width: 40px; text-align: center; }
+            .col-3 { width: 80px; text-align: right; }
+            .sku { font-size: 11px; color: #666; margin-top: 2px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">D&F COSMETICS</div>
+            <div class="subtitle">Recibo de Venta</div>
+          </div>
+          
+          <div class="row border-bottom bold">
+            <div class="col-1">Producto</div>
+            <div class="col-2">Cant</div>
+            <div class="col-3">Subtotal</div>
+          </div>
+          
+          ${carrito.map(item => {
+            const precio = item.tipoPrecio === 'detal' ? item.producto.precio_detal_cop : item.producto.precio_mayor_cop;
+            return `
+              <div class="row" style="margin-bottom: 15px;">
+                <div class="col-1">
+                  <div>${item.producto.nombre}</div>
+                  ${item.producto.codigo_sku ? `<div class="sku">SKU: ${item.producto.codigo_sku}</div>` : ''}
+                </div>
+                <div class="col-2">${item.cantidad}</div>
+                <div class="col-3">$${(precio * item.cantidad).toLocaleString()}</div>
+              </div>
+            `;
+          }).join('')}
+          
+          <div class="border-top">
+            <div class="row"><div style="color: #666;">Total USD:</div><div class="bold">$${totalUSD.toFixed(2)}</div></div>
+            <div class="row"><div style="color: #666;">Total VES:</div><div class="bold">Bs.${totalVES.toFixed(2)}</div></div>
+            <div class="row" style="margin-top: 10px; align-items: center;">
+              <div class="bold" style="font-size: 16px;">TOTAL (COP):</div>
+              <div class="bold" style="font-size: 18px; color: #800000;">$${totalCOP.toLocaleString()}</div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } else {
+      alert('Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para descargar el recibo.');
+    }
+  };
+
   const cuentaDestinoUi = metodosPago.find(c => c.id === metodoPagoSeleccionadoId);
   const esDeudaUi = cuentaDestinoUi?.tipo?.toLowerCase() === 'deuda' || cuentaDestinoUi?.nombre?.toLowerCase().includes('san');
 
@@ -455,7 +527,9 @@ export default function PosScreen() {
               </View>
             </ScrollView>
             <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', backgroundColor: '#F9FAFB' }}>
-              <Text style={{ textAlign: 'center', color: '#6B7280', fontSize: 12 }}>Puedes tomar una captura de pantalla de este recibo para enviarla a tu cliente.</Text>
+              <TouchableOpacity style={[styles.checkoutBtn, { backgroundColor: '#10B981', padding: 12 }]} onPress={imprimirRecibo}>
+                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>🖨️ Descargar / Imprimir Recibo</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
