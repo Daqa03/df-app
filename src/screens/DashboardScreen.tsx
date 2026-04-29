@@ -35,6 +35,10 @@ export default function DashboardScreen() {
   const [ingresosHistoricos, setIngresosHistoricos] = useState(0);
   const [egresosHistoricos, setEgresosHistoricos] = useState(0);
 
+  // Valorización Inventario
+  const [valorInventarioCosto, setValorInventarioCosto] = useState(0);
+  const [valorInventarioVenta, setValorInventarioVenta] = useState(0);
+
   // Listas
   const [topProductos, setTopProductos] = useState<any[]>([]);
   const [stockBajo, setStockBajo] = useState<any[]>([]);
@@ -149,6 +153,19 @@ export default function DashboardScreen() {
       });
       setIngresosHistoricos(ingHist);
       setEgresosHistoricos(egHist);
+    }
+
+    // 7. Valorización de Inventario
+    const { data: invData } = await supabase.from('productos').select('stock_actual, costo_cop, precio_detal_cop').gt('stock_actual', 0);
+    if (invData) {
+      let valCosto = 0;
+      let valVenta = 0;
+      invData.forEach(p => {
+        valCosto += (p.stock_actual * (p.costo_cop || 0));
+        valVenta += (p.stock_actual * (p.precio_detal_cop || 0));
+      });
+      setValorInventarioCosto(valCosto);
+      setValorInventarioVenta(valVenta);
     }
 
     setLoading(false);
@@ -336,6 +353,18 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* FILA NUEVA: Valorización de Inventario (Tarjetas Pequeñas) */}
+        <View style={styles.kpiContainer}>
+          <View style={styles.kpiCardSmall}>
+             <Text style={styles.kpiLabelSmall}>📦 Capital en Inventario (Precio Costo)</Text>
+             <Text style={styles.kpiValueSmall}>${valorInventarioCosto.toLocaleString()}</Text>
+          </View>
+          <View style={styles.kpiCardSmall}>
+             <Text style={styles.kpiLabelSmall}>🏷️ Capital en Inventario (Precio Venta)</Text>
+             <Text style={styles.kpiValueSmall}>${valorInventarioVenta.toLocaleString()}</Text>
+          </View>
+        </View>
+
         {/* FILA 3: Listas Analíticas */}
         <View style={styles.listsContainer}>
           
@@ -466,6 +495,10 @@ const styles = StyleSheet.create({
   kpiCard: { flex: 1, minWidth: 200, backgroundColor: '#FFF', borderRadius: 16, padding: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, borderWidth: 1, borderColor: '#F3F4F6' },
   kpiLabel: { fontSize: 13, color: '#6B7280', fontWeight: 'bold', marginBottom: 5 },
   kpiValue: { fontSize: 24, fontWeight: '900', color: '#1A1A1A' },
+
+  kpiCardSmall: { flex: 1, minWidth: 150, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 15, elevation: 1, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 5, borderWidth: 1, borderColor: '#E5E7EB' },
+  kpiLabelSmall: { fontSize: 11, color: '#6B7280', fontWeight: 'bold', marginBottom: 2 },
+  kpiValueSmall: { fontSize: 16, fontWeight: '800', color: '#4B5563' },
 
   listsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginTop: 10 },
   listCard: { backgroundColor: '#FFF', borderRadius: 16, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden' },
