@@ -21,7 +21,23 @@ export default function ComprasScreen() {
   const [loading, setLoading] = useState(true);
   
   const [busqueda, setBusqueda] = useState('');
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
+  
+  const [carrito, setCarrito] = useState<ItemCarrito[]>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem('df_compras_carrito');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+    }
+    return [];
+  });
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('df_compras_carrito', JSON.stringify(carrito));
+    }
+  }, [carrito]);
+
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState<Entidad | null>(null);
 
   // Estados para Cuentas de Pago

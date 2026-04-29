@@ -21,7 +21,22 @@ export default function PosScreen() {
   const [metodosPago, setMetodosPago] = useState<any[]>([]);
 
   // Estados del Carrito y UI
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
+  const [carrito, setCarrito] = useState<ItemCarrito[]>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem('df_pos_carrito');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+    }
+    return [];
+  });
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('df_pos_carrito', JSON.stringify(carrito));
+    }
+  }, [carrito]);
+
   const [carritoVisibleMovil, setCarritoVisibleMovil] = useState(false);
 
   // Estados del Checkout (Pago)
