@@ -139,12 +139,12 @@ export default function SanesScreen() {
 
       if (error) throw error;
 
-      // await supabase.from('movimientos_caja').insert([{
-      //   cuenta_id: cuentaAbonoId,
-      //   tipo_movimiento: 'Ingreso',
-      //   monto: Number(montoAbono),
-      //   descripcion: `Abono de Crédito/San. Cliente: ${sanSeleccionado.entidades?.nombre || 'Desconocido'}`
-      // }]);
+      await supabase.from('movimientos_caja').insert([{
+        cuenta_id: cuentaAbonoId,
+        tipo_movimiento: 'Ingreso',
+        monto: Number(montoAbono),
+        descripcion: `Abono de Crédito/San. Cliente: ${sanSeleccionado.entidades?.nombre || 'Desconocido'}`
+      }]);
 
       alert('¡Abono registrado correctamente con conversión de moneda!');
       setModalAbono(false);

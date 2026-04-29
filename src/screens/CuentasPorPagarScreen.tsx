@@ -138,12 +138,12 @@ export default function CuentasPorPagarScreen() {
 
       if (error) throw error;
 
-      // await supabase.from('movimientos_caja').insert([{
-      //   cuenta_id: cuentaPagoId,
-      //   tipo_movimiento: 'Egreso',
-      //   monto: Number(montoPago),
-      //   descripcion: `Pago de Deuda. Proveedor: ${deudaSeleccionada.entidades?.nombre || 'Desconocido'}`
-      // }]);
+      await supabase.from('movimientos_caja').insert([{
+        cuenta_id: cuentaPagoId,
+        tipo_movimiento: 'Egreso',
+        monto: Number(montoPago),
+        descripcion: `Pago de Deuda. Proveedor: ${deudaSeleccionada.entidades?.nombre || 'Desconocido'}`
+      }]);
 
       alert('¡Pago registrado correctamente! Se descontó de tu flujo de caja.');
       setModalPago(false);
