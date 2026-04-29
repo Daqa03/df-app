@@ -224,10 +224,16 @@ export default function ComprasScreen() {
           <ScrollView showsVerticalScrollIndicator={false}>
             {carrito.map(item => (
               <View key={item.producto.id} style={styles.cartItem}>
-                <View style={{flex: 1, marginRight: 10}}>
-                  <Text style={styles.cartItemName} numberOfLines={1}>{item.producto.nombre}</Text>
-                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5}}>
-                    <Text style={styles.costoLabel}>Costo c/u: $</Text>
+                <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start'}}>
+                  <Text style={[styles.cartItemName, {flex: 1, marginRight: 10}]} numberOfLines={2}>{item.producto.nombre}</Text>
+                  <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
+                    <Text style={styles.deleteText}>Quitar</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10}}>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
+                    <Text style={styles.costoLabel}>Costo: $</Text>
                     <TextInput 
                       style={[styles.costoInput, {outlineStyle: 'none'} as any]}
                       keyboardType="numeric"
@@ -235,23 +241,18 @@ export default function ComprasScreen() {
                       onChangeText={(val) => actualizarCosto(item.producto.id, val)}
                     />
                   </View>
-                </View>
-                
-                <View style={styles.qtyControls}>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, -1)}>
-                    <Text style={styles.qtyBtnText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.qtyText}>{item.cantidad}</Text>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, 1)}>
-                    <Text style={styles.qtyBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
+                  
+                  <View style={styles.qtyControls}>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, -1)}>
+                      <Text style={styles.qtyBtnText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.qtyText}>{item.cantidad}</Text>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => actualizarCantidad(item.producto.id, 1)}>
+                      <Text style={styles.qtyBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
 
-                <View style={{alignItems: 'flex-end', minWidth: 80}}>
                   <Text style={styles.cartItemTotal}>${(item.cantidad * item.costo_unitario).toLocaleString()}</Text>
-                  <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
-                    <Text style={styles.deleteText}>Quitar</Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             ))}
@@ -448,18 +449,18 @@ const styles = StyleSheet.create({
   carritoEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#9CA3AF', fontSize: 14, fontWeight: 'bold', textAlign: 'center' },
   
-  cartItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 12, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
+  cartItem: { flexDirection: 'column', backgroundColor: '#FFF', padding: 12, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
   cartItemName: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A' },
   costoLabel: { fontSize: 12, color: '#6B7280', fontWeight: 'bold' },
-  costoInput: { backgroundColor: '#F3F4F6', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, fontSize: 13, width: 80, fontWeight: 'bold' },
+  costoInput: { backgroundColor: '#F3F4F6', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, fontSize: 13, minWidth: 70, maxWidth: 90, fontWeight: 'bold' },
   
-  qtyControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 8, marginHorizontal: 10 },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 8 },
   qtyBtn: { paddingHorizontal: 12, paddingVertical: 8 },
   qtyBtnText: { fontSize: 16, fontWeight: 'bold', color: '#4B5563' },
   qtyText: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A', minWidth: 20, textAlign: 'center' },
   
-  cartItemTotal: { fontSize: 15, fontWeight: '900', color: '#6B0D23' },
-  deleteText: { fontSize: 11, color: '#EF4444', fontWeight: 'bold', marginTop: 5 },
+  cartItemTotal: { fontSize: 15, fontWeight: '900', color: '#6B0D23', minWidth: 70, textAlign: 'right' },
+  deleteText: { fontSize: 12, color: '#EF4444', fontWeight: 'bold' },
 
   checkoutFooter: { backgroundColor: '#FFF', paddingTop: 10 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
