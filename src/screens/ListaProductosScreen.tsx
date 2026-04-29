@@ -14,6 +14,7 @@ export default function ListaProductosScreen() {
   
   // --- PAGINACIÓN Y BÚSQUEDA ---
   const [busqueda, setBusqueda] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [filtroOrden, setFiltroOrden] = useState('nombre_asc');
   const [filtrosVisibles, setFiltrosVisibles] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
@@ -261,33 +262,34 @@ export default function ListaProductosScreen() {
           <Text style={styles.title}>Inventario de Productos</Text>
           <Text style={styles.subtitle}>Gestiona tus productos y existencias</Text>
         </View>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-          <Text style={styles.addBtnText}>+ Nuevo Producto</Text>
-        </TouchableOpacity>
       </View>
       
       <View style={styles.toolbar}>
         <View style={styles.toolbarRow}>
           <TextInput 
-            style={[styles.searchInput, {outlineStyle: 'none'} as any, isMobile ? {flex: 1, marginRight: 10} : {width: 250}]} 
+            style={[styles.searchInput, {outlineStyle: 'none'} as any, (isMobile && isSearchFocused) ? {flex: 1} : (isMobile ? {flex: 1, marginRight: 5} : {width: 250})]} 
             placeholder="🔍 Buscar producto..." 
             value={busqueda}
             onChangeText={(text) => { setBusqueda(text); setPaginaActual(1); }}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
           />
           
-          <TouchableOpacity 
-            style={styles.btnFiltroToggle} 
-            onPress={() => setFiltrosVisibles(!filtrosVisibles)}
-          >
-            <Text style={styles.btnFiltroToggleText}>Filtros {filtrosVisibles ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
+          {(!isMobile || !isSearchFocused) && (
+            <>
+              <TouchableOpacity 
+                style={[styles.btnFiltroToggle, isMobile && {paddingHorizontal: 10}]} 
+                onPress={() => setFiltrosVisibles(!filtrosVisibles)}
+              >
+                <Text style={styles.btnFiltroToggleText}>Filtros {filtrosVisibles ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
 
-          {!isMobile && (
-            <View style={styles.viewTogglesDesktop}>
-              <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
-            </View>
+              <View style={[styles.viewTogglesDesktop, isMobile && {marginLeft: 5}]}>
+                <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
+              </View>
+            </>
           )}
         </View>
 
@@ -306,20 +308,12 @@ export default function ListaProductosScreen() {
                 <TouchableOpacity 
                   key={f.id} 
                   style={[styles.sortPill, filtroOrden === f.id && styles.sortPillActive]} 
-                  onPress={() => { setFiltroOrden(f.id); setPaginaActual(1); }}
+                  onPress={() => { setFiltroOrden(f.id); setPaginaActual(1); setFiltrosVisibles(false); }}
                 >
                   <Text style={[styles.sortPillText, filtroOrden === f.id && styles.sortPillTextActive]}>{f.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        )}
-
-        {isMobile && (
-          <View style={styles.viewTogglesMobile}>
-            <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
           </View>
         )}
       </View>
@@ -411,7 +405,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#6B7280' },
   
   // Toolbar styles
-  toolbar: { paddingHorizontal: 15, marginBottom: 20 },
+  toolbar: { paddingHorizontal: 15, marginBottom: 20, position: 'relative', zIndex: 10 },
   toolbarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
   searchInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 15, height: 45, fontSize: 14, elevation: 1 },
   
@@ -423,7 +417,7 @@ const styles = StyleSheet.create({
   viewBtn: { padding: 8, borderRadius: 8 },
   viewBtnActive: { backgroundColor: '#FFF' },
 
-  accordionContainer: { marginTop: 15, backgroundColor: '#FFF', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  accordionContainer: { position: 'absolute', top: 60, left: 15, right: 15, backgroundColor: '#FFF', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', zIndex: 20, elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10 },
   accordionTitle: { fontSize: 13, fontWeight: 'bold', color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' },
   pillsWrapContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   
