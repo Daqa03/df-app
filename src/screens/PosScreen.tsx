@@ -26,6 +26,7 @@ export default function PosScreen() {
   
   // Estados del Checkout (Pago)
   const [checkoutModal, setCheckoutModal] = useState(false);
+  const [reciboModal, setReciboModal] = useState(false);
   const [metodoPagoSeleccionadoId, setMetodoPagoSeleccionadoId] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [busquedaCliente, setBusquedaCliente] = useState('');
@@ -184,7 +185,7 @@ export default function PosScreen() {
         if (cuentaDestino.moneda === 'VES') montoFinal = totalVES;
 
         const nombreCli = entidades.find(e => e.id === clienteId)?.nombre || 'Mostrador';
-        const detalleProductos = carrito.map(item => `${item.cantidad}x ${item.producto.nombre}`).join(', ');
+        const detalleProductos = carrito.map(item => `${item.cantidad}x ${item.producto.nombre} (${item.tipoPrecio === 'mayor' ? 'Mayor' : 'Detal'})`).join(', ');
         
         await supabase.from('movimientos_caja').insert([{
           cuenta_id: cuentaDestino.id,
@@ -260,6 +261,12 @@ export default function PosScreen() {
       <TouchableOpacity style={[styles.checkoutBtn, carrito.length === 0 && styles.checkoutBtnDisabled]} disabled={carrito.length === 0} onPress={abrirCheckout}>
         <Text style={styles.checkoutText}>Cobrar</Text>
       </TouchableOpacity>
+
+      {carrito.length > 0 && (
+        <TouchableOpacity style={[styles.checkoutBtn, { backgroundColor: '#F3F4F6', marginTop: 10, borderWidth: 1, borderColor: '#E5E7EB' }]} onPress={() => setReciboModal(true)}>
+          <Text style={[styles.checkoutText, { color: '#1A1A1A' }]}>🧾 Crear Factura</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -394,6 +401,62 @@ export default function PosScreen() {
                 )}
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: FACTURA / RECIBO */}
+      <Modal visible={reciboModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlayCenter}>
+          <View style={[styles.checkoutCard, { padding: 0 }]}>
+            <View style={[styles.modalHeader, { backgroundColor: '#F9FAFB' }]}>
+              <Text style={styles.modalTitle}>Factura / Recibo</Text>
+              <TouchableOpacity onPress={() => setReciboModal(false)}>
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 20, maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+              <Text style={{ textAlign: 'center', fontSize: 18, fontWeight: 'bold', marginBottom: 5 }}>D&F MAKEUP</Text>
+              <Text style={{ textAlign: 'center', color: '#6B7280', fontSize: 12, marginBottom: 20 }}>Recibo de Venta</Text>
+              
+              <View style={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontWeight: 'bold', flex: 2, color: '#374151', fontSize: 13 }}>Producto</Text>
+                <Text style={{ fontWeight: 'bold', width: 40, textAlign: 'center', color: '#374151', fontSize: 13 }}>Cant</Text>
+                <Text style={{ fontWeight: 'bold', width: 80, textAlign: 'right', color: '#374151', fontSize: 13 }}>Subtotal</Text>
+              </View>
+
+              {carrito.map((item, index) => {
+                 const precio = item.tipoPrecio === 'detal' ? item.producto.precio_detal_cop : item.producto.precio_mayor_cop;
+                 return (
+                  <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                    <View style={{ flex: 2 }}>
+                      <Text style={{ fontSize: 13, color: '#1A1A1A' }}>{item.producto.nombre}</Text>
+                      {item.producto.codigo_sku ? <Text style={{ fontSize: 11, color: '#6B7280' }}>SKU: {item.producto.codigo_sku}</Text> : null}
+                    </View>
+                    <Text style={{ fontSize: 13, width: 40, textAlign: 'center' }}>{item.cantidad}</Text>
+                    <Text style={{ fontSize: 13, width: 80, textAlign: 'right' }}>${(precio * item.cantidad).toLocaleString()}</Text>
+                  </View>
+                 );
+              })}
+
+              <View style={{ borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 15, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <Text style={{ color: '#6B7280', fontSize: 14 }}>Total USD:</Text>
+                  <Text style={{ color: '#374151', fontSize: 14, fontWeight: 'bold' }}>${totalUSD.toFixed(2)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ color: '#6B7280', fontSize: 14 }}>Total VES:</Text>
+                  <Text style={{ color: '#374151', fontSize: 14, fontWeight: 'bold' }}>Bs.{totalVES.toFixed(2)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold' }}>TOTAL (COP):</Text>
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#6B0D23' }}>${totalCOP.toLocaleString()}</Text>
+                </View>
+              </View>
+            </ScrollView>
+            <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', backgroundColor: '#F9FAFB' }}>
+              <Text style={{ textAlign: 'center', color: '#6B7280', fontSize: 12 }}>Puedes tomar una captura de pantalla de este recibo para enviarla a tu cliente.</Text>
+            </View>
           </View>
         </View>
       </Modal>

@@ -19,6 +19,7 @@ export default function FlujoCajaScreen() {
 
   // Filtros Historial
   const [busquedaHistorial, setBusquedaHistorial] = useState('');
+  const [fechaFiltro, setFechaFiltro] = useState('');
 
   // Estados para el Modal de Nuevo Movimiento
   const [modalVisible, setModalVisible] = useState(false);
@@ -118,15 +119,25 @@ export default function FlujoCajaScreen() {
 
   // Filtrado del historial
   const movimientosFiltrados = movimientos.filter(mov => {
-    if (!busquedaHistorial) return true;
-    const termino = busquedaHistorial.toLowerCase();
-    const fechaText = new Date(mov.fecha).toLocaleDateString();
-    return (
-      (mov.descripcion && mov.descripcion.toLowerCase().includes(termino)) ||
-      (mov.cuentas?.nombre && mov.cuentas.nombre.toLowerCase().includes(termino)) ||
-      mov.monto.toString().includes(termino) ||
-      fechaText.includes(termino)
-    );
+    let pasaTexto = true;
+    if (busquedaHistorial) {
+      const termino = busquedaHistorial.toLowerCase();
+      const fechaText = new Date(mov.fecha).toLocaleDateString();
+      pasaTexto = (
+        (mov.descripcion && mov.descripcion.toLowerCase().includes(termino)) ||
+        (mov.cuentas?.nombre && mov.cuentas.nombre.toLowerCase().includes(termino)) ||
+        mov.monto.toString().includes(termino) ||
+        fechaText.includes(termino)
+      );
+    }
+    
+    let pasaFecha = true;
+    if (fechaFiltro) {
+      const movDateStr = new Date(mov.fecha).toISOString().split('T')[0];
+      pasaFecha = movDateStr === fechaFiltro;
+    }
+
+    return pasaTexto && pasaFecha;
   });
 
   // Cálculo del Total Patrimonial
@@ -208,13 +219,24 @@ export default function FlujoCajaScreen() {
             <Text style={styles.sectionTitle}>Historial de Movimientos</Text>
             
             <View style={styles.historyCard}>
-              <View style={styles.searchBox}>
-                <TextInput 
-                  style={[styles.searchInput, {outlineStyle: 'none'} as any]} 
-                  placeholder="Buscar movimientos..." 
-                  value={busquedaHistorial}
-                  onChangeText={setBusquedaHistorial}
-                />
+              <View style={{flexDirection: 'row', gap: 10, marginBottom: 15}}>
+                <View style={[styles.searchBox, {flex: 2, marginBottom: 0}]}>
+                  <TextInput 
+                    style={[styles.searchInput, {outlineStyle: 'none'} as any]} 
+                    placeholder="Buscar movimientos..." 
+                    value={busquedaHistorial}
+                    onChangeText={setBusquedaHistorial}
+                  />
+                </View>
+                <View style={[styles.searchBox, {flex: 1, marginBottom: 0}]}>
+                  <TextInput 
+                    style={[styles.searchInput, {outlineStyle: 'none'} as any]} 
+                    type="date"
+                    placeholder="YYYY-MM-DD" 
+                    value={fechaFiltro}
+                    onChangeText={setFechaFiltro}
+                  />
+                </View>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={isDesktop ? undefined : {height: 400}}>
