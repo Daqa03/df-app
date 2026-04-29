@@ -14,6 +14,7 @@ export default function ListaProductosScreen() {
   
   // --- PAGINACIÓN Y BÚSQUEDA ---
   const [busqueda, setBusqueda] = useState('');
+  const [filtroOrden, setFiltroOrden] = useState('nombre_asc');
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 12;
@@ -56,7 +57,15 @@ export default function ListaProductosScreen() {
     const from = (paginaActual - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
-    const { data, count, error } = await query.order('nombre', { ascending: true }).range(from, to);
+    let col = 'nombre';
+    let asc = true;
+    if (filtroOrden === 'nombre_desc') { col = 'nombre'; asc = false; }
+    if (filtroOrden === 'stock_asc') { col = 'stock_actual'; asc = true; }
+    if (filtroOrden === 'stock_desc') { col = 'stock_actual'; asc = false; }
+    if (filtroOrden === 'sku_asc') { col = 'codigo_sku'; asc = true; }
+    if (filtroOrden === 'sku_desc') { col = 'codigo_sku'; asc = false; }
+
+    const { data, count, error } = await query.order(col, { ascending: asc }).range(from, to);
     if (!error) { setProductos(data || []); setTotalItems(count || 0); }
     setLoading(false);
   };
@@ -64,7 +73,7 @@ export default function ListaProductosScreen() {
   useEffect(() => {
     const delay = setTimeout(() => { cargarProductos(); }, 300);
     return () => clearTimeout(delay);
-  }, [busqueda, paginaActual]);
+  }, [busqueda, paginaActual, filtroOrden]);
 
   const abrirModalReabastecer = (producto: any) => {
     setRProductoActivo(producto);
@@ -246,12 +255,44 @@ export default function ListaProductosScreen() {
 
   return (
     <View style={styles.container}>
-      
       <View style={styles.topHeader}>
-        <View style={styles.searchBox}>
-          <TextInput style={[styles.searchInput, {outlineStyle: 'none'} as any]} placeholder="Buscar..." value={busqueda} onChangeText={(t) => {setBusqueda(t); setPaginaActual(1);}} />
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>Inventario de Productos</Text>
+          <Text style={styles.subtitle}>Gestiona tus productos y existencias</Text>
         </View>
-        <View style={styles.viewSelector}>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+          <Text style={styles.addBtnText}>+ Nuevo Producto</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.toolbar}>
+        <TextInput 
+          style={[styles.searchInput, {outlineStyle: 'none'} as any, isMobile ? {width: '100%', marginBottom: 10} : {width: 250}]} 
+          placeholder="🔍 Buscar producto..." 
+          value={busqueda}
+          onChangeText={(text) => { setBusqueda(text); setPaginaActual(1); }}
+        />
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortFiltersContainer}>
+          {[
+            { id: 'nombre_asc', label: 'A-Z' },
+            { id: 'nombre_desc', label: 'Z-A' },
+            { id: 'stock_desc', label: '+ Stock' },
+            { id: 'stock_asc', label: '- Stock' },
+            { id: 'sku_asc', label: 'SKU Asc' },
+            { id: 'sku_desc', label: 'SKU Desc' },
+          ].map(f => (
+            <TouchableOpacity 
+              key={f.id} 
+              style={[styles.sortPill, filtroOrden === f.id && styles.sortPillActive]} 
+              onPress={() => { setFiltroOrden(f.id); setPaginaActual(1); }}
+            >
+              <Text style={[styles.sortPillText, filtroOrden === f.id && styles.sortPillTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={styles.viewToggles}>
           <TouchableOpacity onPress={() => setVista('list')} style={[styles.viewBtn, vista === 'list' && styles.viewBtnActive]}><Text>≡</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => setVista('grid')} style={[styles.viewBtn, vista === 'grid' && styles.viewBtnActive]}><Text>🔲</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => setVista('compact')} style={[styles.viewBtn, vista === 'compact' && styles.viewBtnActive]}><Text>⁝⁝</Text></TouchableOpacity>
@@ -339,12 +380,22 @@ export default function ListaProductosScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', maxWidth: 1200 },
-  topHeader: { flexDirection: 'row', padding: 15, alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  searchBox: { flex: 1, backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 15, height: 45, justifyContent: 'center', elevation: 2, minWidth: 150 },
-  searchInput: { fontSize: 15 },
-  viewSelector: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 12, padding: 4 },
+  topHeader: { flexDirection: 'row', padding: 15, alignItems: 'center', justifyContent: 'space-between' },
+  headerLeft: { flex: 1 },
+  title: { fontSize: 24, fontWeight: '800', color: '#1A1A1A' },
+  subtitle: { fontSize: 14, color: '#6B7280' },
+  
+  toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15, marginBottom: 20, flexWrap: 'wrap', gap: 15 },
+  searchInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 15, height: 45, fontSize: 14, elevation: 1 },
+  sortFiltersContainer: { flex: 1, maxHeight: 45, paddingVertical: 2 },
+  sortPill: { backgroundColor: '#F3F4F6', paddingHorizontal: 15, justifyContent: 'center', borderRadius: 20, marginRight: 10, borderWidth: 1, borderColor: '#E5E7EB' },
+  sortPillActive: { backgroundColor: '#6B0D23', borderColor: '#6B0D23' },
+  sortPillText: { fontSize: 12, color: '#4B5563', fontWeight: 'bold' },
+  sortPillTextActive: { color: '#FFF' },
+  viewToggles: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 12, padding: 4 },
   viewBtn: { padding: 8, borderRadius: 8 },
   viewBtnActive: { backgroundColor: '#FFF' },
+  
   addBtn: { backgroundColor: '#6B0D23', paddingHorizontal: 15, height: 45, justifyContent: 'center', borderRadius: 12, elevation: 2 },
   addBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   emptyText: { textAlign: 'center', marginTop: 40, color: '#6B7280', fontSize: 16 },

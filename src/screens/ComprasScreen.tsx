@@ -522,7 +522,8 @@ export default function ComprasScreen() {
       <Modal visible={modalCheckout} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCardCheckout}>
-            <Text style={{fontSize: 50, textAlign: 'center', marginBottom: 10}}>📦</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={{fontSize: 50, textAlign: 'center', marginBottom: 10}}>📦</Text>
             <Text style={styles.modalTitleCenter}>Confirmar Compra</Text>
             <Text style={styles.checkoutDesc}>
               Se agregará el stock al inventario por un valor total de <Text style={{fontWeight: 'bold'}}>${calcularTotal().toLocaleString()} COP</Text>.
@@ -563,6 +564,7 @@ export default function ComprasScreen() {
                 </TouchableOpacity>
               </View>
             )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
