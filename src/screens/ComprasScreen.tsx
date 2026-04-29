@@ -42,6 +42,13 @@ export default function ComprasScreen() {
   // Móvil
   const [carritoVisibleMovil, setCarritoVisibleMovil] = useState(false);
 
+  // Modal Editar Precios
+  const [modalPrecios, setModalPrecios] = useState(false);
+  const [productoEdicion, setProductoEdicion] = useState<Producto | null>(null);
+  const [precioDetalEdit, setPrecioDetalEdit] = useState('');
+  const [precioMayorEdit, setPrecioMayorEdit] = useState('');
+  const [guardandoPrecios, setGuardandoPrecios] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -153,6 +160,36 @@ export default function ComprasScreen() {
     }
   };
 
+  const abrirEdicionPrecios = (producto: Producto) => {
+    setProductoEdicion(producto);
+    setPrecioDetalEdit(String(producto.precio_detal_cop || ''));
+    setPrecioMayorEdit(String(producto.precio_mayor_cop || ''));
+    setModalPrecios(true);
+  };
+
+  const guardarPreciosVenta = async () => {
+    if (!productoEdicion) return;
+    setGuardandoPrecios(true);
+    try {
+      const pDetal = Number(precioDetalEdit);
+      const pMayor = Number(precioMayorEdit);
+      const { error } = await supabase.from('productos')
+        .update({ precio_detal_cop: pDetal, precio_mayor_cop: pMayor })
+        .eq('id', productoEdicion.id);
+      if (error) throw error;
+      
+      alert('Precios actualizados exitosamente.');
+      setModalPrecios(false);
+      
+      setProductos(productos.map(p => p.id === productoEdicion.id ? { ...p, precio_detal_cop: pDetal, precio_mayor_cop: pMayor } : p));
+      setCarrito(carrito.map(item => item.producto.id === productoEdicion.id ? { ...item, producto: { ...item.producto, precio_detal_cop: pDetal, precio_mayor_cop: pMayor } } : item));
+    } catch (error: any) {
+      alert('Error al guardar precios: ' + error.message);
+    } finally {
+      setGuardandoPrecios(false);
+    }
+  };
+
   const finalizarCompra = async () => {
     if (!proveedorSeleccionado) return alert('Selecciona un proveedor antes de finalizar.');
     if (carrito.length === 0) return alert('Agrega productos a la compra.');
@@ -251,9 +288,14 @@ export default function ComprasScreen() {
                     {item.producto.codigo_sku ? <Text style={styles.skuText}>[{item.producto.codigo_sku}]</Text> : null}
                     <Text style={styles.cartItemName} numberOfLines={2}>{item.producto.nombre}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
-                    <Text style={styles.deleteText}>Quitar</Text>
-                  </TouchableOpacity>
+                  <View style={{flexDirection: 'row', gap: 15}}>
+                    <TouchableOpacity onPress={() => abrirEdicionPrecios(item.producto)}>
+                      <Text style={styles.editPriceText}>✏️ Precios</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => eliminarDelCarrito(item.producto.id)}>
+                      <Text style={styles.deleteText}>Quitar</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10}}>
@@ -348,6 +390,7 @@ export default function ComprasScreen() {
                   {prod.codigo_sku ? <Text style={styles.skuText}>[{prod.codigo_sku}]</Text> : null}
                   <Text style={styles.productoNombre} numberOfLines={2}>{prod.nombre}</Text>
                   <Text style={styles.productoCostoAnt}>Costo ant: ${prod.costo_cop?.toLocaleString() || 0}</Text>
+                  <Text style={styles.productoStockGrid}>Stock: {prod.stock_actual}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -487,6 +530,7 @@ const styles = StyleSheet.create({
   skuText: { fontSize: 11, color: '#9CA3AF', fontWeight: 'bold', marginBottom: 2 },
   productoNombre: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 4 },
   productoCostoAnt: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
+  productoStockGrid: { fontSize: 11, color: '#10B981', fontWeight: 'bold', marginTop: 2 },
 
   panelTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 15 },
   labelSection: { fontSize: 13, fontWeight: 'bold', color: '#4B5563', marginBottom: 10 },
@@ -513,6 +557,7 @@ const styles = StyleSheet.create({
   
   cartItemTotal: { fontSize: 15, fontWeight: '900', color: '#6B0D23', minWidth: 70, textAlign: 'right' },
   deleteText: { fontSize: 12, color: '#EF4444', fontWeight: 'bold' },
+  editPriceText: { color: '#4B5563', fontSize: 12, fontWeight: 'bold' },
 
   checkoutFooter: { backgroundColor: '#FFF', paddingTop: 10 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
