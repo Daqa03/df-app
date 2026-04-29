@@ -11,6 +11,7 @@ import FlujoCajaScreen from './src/screens/FlujoCajaScreen';
 import DirectorioScreen from './src/screens/DirectorioScreen';
 import SanesScreen from './src/screens/SanesScreen';
 import CuentasPorPagarScreen from './src/screens/CuentasPorPagarScreen';
+import ComprasScreen from './src/screens/ComprasScreen';
 import LoginScreen from './src/screens/LoginScreen';
 
 export default function App() {
@@ -50,6 +51,13 @@ export default function App() {
           onPress={() => { setPantallaActiva("pos"); setMenuAbierto(false); }}
         >
           <Text style={[styles.menuText, pantallaActiva === "pos" && styles.menuTextActive]}>🛒 Ventas (POS)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuItem, pantallaActiva === "compras" && styles.menuItemActive]}
+          onPress={() => { setPantallaActiva("compras"); setMenuAbierto(false); }}
+        >
+          <Text style={[styles.menuText, pantallaActiva === "compras" && styles.menuTextActive]}>📦 Compras</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -135,6 +143,7 @@ export default function App() {
       <View style={styles.contentArea}>
         {pantallaActiva === 'dashboard' && <DashboardScreen />}
         {pantallaActiva === 'pos' && <PosScreen />}
+        {pantallaActiva === 'compras' && <ComprasScreen />}
         {pantallaActiva === 'flujo' && <FlujoCajaScreen />}
         {pantallaActiva === 'sanes' && <SanesScreen />}
         {pantallaActiva === 'cuentas_pagar' && <CuentasPorPagarScreen />}

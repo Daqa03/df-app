@@ -294,14 +294,33 @@ export default function DashboardScreen() {
         </View>
 
         {/* FILA NUEVA: Histórico Flujo de Caja */}
-        <View style={styles.kpiContainer}>
-          <View style={[styles.kpiCard, {borderLeftColor: '#10B981', borderLeftWidth: 4}]}>
-            <Text style={styles.kpiLabel}>Ingresos Totales (Histórico)</Text>
-            <Text style={[styles.kpiValue, {color: '#10B981', fontSize: 20}]}>${ingresosHistoricos.toLocaleString()}</Text>
-          </View>
-          <View style={[styles.kpiCard, {borderLeftColor: '#DC2626', borderLeftWidth: 4}]}>
-            <Text style={styles.kpiLabel}>Egresos Totales (Histórico)</Text>
-            <Text style={[styles.kpiValue, {color: '#DC2626', fontSize: 20}]}>${egresosHistoricos.toLocaleString()}</Text>
+        {/* GRÁFICO BARRAS: Ingresos vs Egresos Históricos */}
+        <View style={styles.chartCard}>
+          <Text style={styles.listTitle}>📈 Histórico Global (Ingresos vs Egresos)</Text>
+          <View style={{marginTop: 20}}>
+            
+            {/* Barra Ingresos */}
+            <View style={styles.barChartRow}>
+              <View style={styles.barChartLabelContainer}>
+                <Text style={styles.barChartLabel}>Ingresos</Text>
+                <Text style={[styles.barChartValue, {color: '#10B981'}]}>${ingresosHistoricos.toLocaleString()}</Text>
+              </View>
+              <View style={styles.barChartTrack}>
+                <View style={[styles.barChartFill, {backgroundColor: '#10B981', width: `${Math.max((ingresosHistoricos / Math.max(ingresosHistoricos, egresosHistoricos, 1)) * 100, 2)}%`}]} />
+              </View>
+            </View>
+
+            {/* Barra Egresos */}
+            <View style={styles.barChartRow}>
+              <View style={styles.barChartLabelContainer}>
+                <Text style={styles.barChartLabel}>Egresos</Text>
+                <Text style={[styles.barChartValue, {color: '#DC2626'}]}>${egresosHistoricos.toLocaleString()}</Text>
+              </View>
+              <View style={styles.barChartTrack}>
+                <View style={[styles.barChartFill, {backgroundColor: '#DC2626', width: `${Math.max((egresosHistoricos / Math.max(ingresosHistoricos, egresosHistoricos, 1)) * 100, 2)}%`}]} />
+              </View>
+            </View>
+
           </View>
         </View>
 
@@ -321,6 +340,7 @@ export default function DashboardScreen() {
         <View style={styles.listsContainer}>
           
           {/* Top Productos */}
+          {/* Top Productos con Gráfica */}
           <View style={[styles.listCard, getColStyle()]}>
             <View style={styles.listHeader}>
               <Text style={styles.listTitle}>🏆 Top Productos (En el rango)</Text>
@@ -329,15 +349,21 @@ export default function DashboardScreen() {
               {topProductos.length === 0 ? (
                 <Text style={styles.emptyText}>No hay ventas en este rango de fecha.</Text>
               ) : (
-                topProductos.map((prod, index) => (
-                  <View key={index} style={styles.listItem}>
-                    <View style={styles.rankBadge}>
-                      <Text style={styles.rankText}>{index + 1}</Text>
+                topProductos.map((prod, index) => {
+                  const maxVentas = Math.max(...topProductos.map(p => p.cantidad), 1);
+                  const widthPercent = (prod.cantidad / maxVentas) * 100;
+                  return (
+                    <View key={index} style={styles.topProductItem}>
+                      <View style={styles.topProductHeader}>
+                        <Text style={styles.rankText}>#{index + 1} {prod.nombre}</Text>
+                        <Text style={styles.itemCantidad}>{prod.cantidad} und</Text>
+                      </View>
+                      <View style={styles.barChartTrackSmall}>
+                        <View style={[styles.barChartFillSmall, {width: `${widthPercent}%`}]} />
+                      </View>
                     </View>
-                    <Text style={styles.itemNombre} numberOfLines={1}>{prod.nombre}</Text>
-                    <Text style={styles.itemCantidad}>{prod.cantidad} und</Text>
-                  </View>
-                ))
+                  )
+                })
               )}
             </View>
           </View>
@@ -452,4 +478,18 @@ const styles = StyleSheet.create({
   itemNombre: { flex: 1, fontSize: 14, fontWeight: '600', color: '#374151', paddingRight: 10 },
   itemCantidad: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A' },
   emptyText: { textAlign: 'center', color: '#9CA3AF', paddingVertical: 20, fontStyle: 'italic' },
+  
+  // Custom Charts Styles
+  chartCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, borderWidth: 1, borderColor: '#F3F4F6', marginBottom: 15, zIndex: 1 },
+  barChartRow: { marginBottom: 15 },
+  barChartLabelContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  barChartLabel: { fontSize: 14, fontWeight: 'bold', color: '#4B5563' },
+  barChartValue: { fontSize: 14, fontWeight: '900' },
+  barChartTrack: { height: 12, backgroundColor: '#F3F4F6', borderRadius: 6, overflow: 'hidden' },
+  barChartFill: { height: '100%', borderRadius: 6 },
+  
+  topProductItem: { marginBottom: 15 },
+  topProductHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  barChartTrackSmall: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
+  barChartFillSmall: { height: '100%', backgroundColor: '#6B0D23', borderRadius: 3 },
 });
