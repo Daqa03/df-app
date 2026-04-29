@@ -335,15 +335,20 @@ export default function ComprasScreen() {
           <ScrollView contentContainerStyle={styles.productosGrid} showsVerticalScrollIndicator={false}>
             {productosFiltrados.map(prod => (
               <TouchableOpacity key={prod.id} style={[styles.productoCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
-                <View style={styles.productoIcon}>
+                <View style={styles.productoImageContainer}>
                   {prod.imagen_url ? (
-                    <Image source={{uri: prod.imagen_url}} style={{width: 50, height: 50, borderRadius: 8}} />
+                    <Image source={{uri: prod.imagen_url}} style={styles.productoImageFull} />
                   ) : (
-                    <Text style={{fontSize: 24}}>📦</Text>
+                    <View style={styles.productoIconFull}>
+                      <Text style={{fontSize: 30}}>📦</Text>
+                    </View>
                   )}
                 </View>
-                {prod.codigo_sku ? <Text style={styles.skuText}>[{prod.codigo_sku}]</Text> : null}
-                <Text style={styles.productoNombre} numberOfLines={2}>{prod.nombre}</Text>
+                <View style={styles.productoInfoContainer}>
+                  {prod.codigo_sku ? <Text style={styles.skuText}>[{prod.codigo_sku}]</Text> : null}
+                  <Text style={styles.productoNombre} numberOfLines={2}>{prod.nombre}</Text>
+                  <Text style={styles.productoCostoAnt}>Costo ant: ${prod.costo_cop?.toLocaleString() || 0}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -474,10 +479,14 @@ const styles = StyleSheet.create({
   searchInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, padding: 15, fontSize: 15, marginBottom: 20 },
   
   productosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingBottom: 50 },
-  productoCard: { backgroundColor: '#FFF', width: 160, padding: 15, borderRadius: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, borderWidth: 1, borderColor: '#F3F4F6' },
-  productoIcon: { width: 50, height: 50, backgroundColor: '#FAF8F5', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 10, alignSelf: 'flex-start' },
+  productoCard: { backgroundColor: '#FFF', width: 150, borderRadius: 16, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, borderWidth: 1, borderColor: '#F3F4F6' },
+  productoImageContainer: { width: '100%', height: 120, backgroundColor: '#F3F4F6' },
+  productoImageFull: { width: '100%', height: '100%', resizeMode: 'cover' },
+  productoIconFull: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  productoInfoContainer: { padding: 12 },
   skuText: { fontSize: 11, color: '#9CA3AF', fontWeight: 'bold', marginBottom: 2 },
-  productoNombre: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 5 },
+  productoNombre: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 4 },
+  productoCostoAnt: { fontSize: 12, color: '#6B7280', fontWeight: '600' },
 
   panelTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 15 },
   labelSection: { fontSize: 13, fontWeight: 'bold', color: '#4B5563', marginBottom: 10 },
