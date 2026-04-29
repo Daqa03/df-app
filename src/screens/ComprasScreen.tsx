@@ -319,7 +319,14 @@ export default function ComprasScreen() {
 
   const renderPanelResumenCompra = () => (
     <View style={[styles.rightPanel, {flex: 1}]}>
-      <Text style={styles.panelTitle}>Resumen de la Compra</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+        <Text style={[styles.panelTitle, { marginBottom: 0 }]}>Resumen de la Compra</Text>
+        {carrito.length > 0 && (
+          <TouchableOpacity onPress={() => setCarrito([])}>
+            <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: 'bold' }}>Vaciar</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       
       {/* Selector de Proveedor */}
       <Text style={styles.labelSection}>Proveedor:</Text>
