@@ -318,17 +318,17 @@ export default function FlujoCajaScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Flujo de Caja</Text>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#10B981'}]} onPress={() => { setTipoMovimiento('Ingreso'); setModalVisible(true); }}>
+        <View style={[styles.actionButtons, !isDesktop && { width: '100%', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10, marginTop: 10 }]}>
+          <TouchableOpacity style={[styles.actionBtn, !isDesktop && { width: '48%', alignItems: 'center', paddingHorizontal: 10 }, {backgroundColor: '#10B981'}]} onPress={() => { setTipoMovimiento('Ingreso'); setModalVisible(true); }}>
             <Text style={styles.actionBtnText}>📥 Inyectar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#DC2626'}]} onPress={() => { setTipoMovimiento('Egreso'); setModalVisible(true); }}>
+          <TouchableOpacity style={[styles.actionBtn, !isDesktop && { width: '48%', alignItems: 'center', paddingHorizontal: 10 }, {backgroundColor: '#DC2626'}]} onPress={() => { setTipoMovimiento('Egreso'); setModalVisible(true); }}>
             <Text style={styles.actionBtnText}>📤 Gasto</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#3B82F6'}]} onPress={() => setTransferModalVisible(true)}>
+          <TouchableOpacity style={[styles.actionBtn, !isDesktop && { width: '48%', alignItems: 'center', paddingHorizontal: 10 }, {backgroundColor: '#3B82F6'}]} onPress={() => setTransferModalVisible(true)}>
             <Text style={styles.actionBtnText}>🔀 Transferir</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#F59E0B'}]} onPress={() => {
+          <TouchableOpacity style={[styles.actionBtn, !isDesktop && { width: '48%', alignItems: 'center', paddingHorizontal: 10 }, {backgroundColor: '#F59E0B'}]} onPress={() => {
             setLoanModalVisible(true);
             if (entidades.length > 0 && !loanEntidadId) setLoanEntidadId(entidades[0].id);
           }}>
