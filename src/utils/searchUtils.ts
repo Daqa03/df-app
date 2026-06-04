@@ -19,6 +19,7 @@ export function normalizeText(text: string): string {
  * Ejemplo: fuzzyMatch("Rímel Profesional", "rimel") → true
  */
 export function fuzzyMatch(text: string, query: string): boolean {
-  if (!text || !query) return false;
+  if (!query) return true;
+  if (!text) return false;
   return normalizeText(text).includes(normalizeText(query));
 }
