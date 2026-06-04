@@ -20,7 +20,19 @@ export default function App() {
   
   const [session, setSession] = useState<Session | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const [pantallaActiva, setPantallaActiva] = useState('dashboard');
+  const [pantallaActiva, setPantallaActiva] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem('df_pantalla_activa');
+      if (saved) return saved;
+    }
+    return 'dashboard';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('df_pantalla_activa', pantallaActiva);
+    }
+  }, [pantallaActiva]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));

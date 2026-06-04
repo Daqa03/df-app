@@ -34,6 +34,26 @@ export default function FlujoCajaScreen() {
   const [modalDetalleVisible, setModalDetalleVisible] = useState(false);
   const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<Movimiento | null>(null);
 
+  // Estado para Entidades (Directorio)
+  const [entidades, setEntidades] = useState<any[]>([]);
+
+  // Estados para Modal de Transferencia entre Cuentas
+  const [transferModalVisible, setTransferModalVisible] = useState(false);
+  const [transferCuentaOrigenId, setTransferCuentaOrigenId] = useState('');
+  const [transferCuentaDestinoId, setTransferCuentaDestinoId] = useState('');
+  const [transferMontoEnviado, setTransferMontoEnviado] = useState('');
+  const [transferMontoRecibido, setTransferMontoRecibido] = useState('');
+  const [procesandoTransferencia, setProcesandoTransferencia] = useState(false);
+
+  // Estados para Modal de Préstamo de Dinero
+  const [loanModalVisible, setLoanModalVisible] = useState(false);
+  const [loanCuentaId, setLoanCuentaId] = useState('');
+  const [loanEntidadId, setLoanEntidadId] = useState('');
+  const [loanMonto, setLoanMonto] = useState('');
+  const [loanFrecuencia, setLoanFrecuencia] = useState('Quincenal');
+  const [loanDescripcion, setLoanDescripcion] = useState('');
+  const [procesandoPrestamo, setProcesandoPrestamo] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
     
@@ -48,11 +68,20 @@ export default function FlujoCajaScreen() {
 
     // Traer Cuentas
     const { data: cuentasData } = await supabase.from('cuentas').select('*').eq('activo', true).order('nombre');
-    if (cuentasData) {
+    if (cuentasData && cuentasData.length > 0) {
       setCuentas(cuentasData);
-      if (cuentasData.length > 0 && !cuentaSeleccionadaId) {
-        setCuentaSeleccionadaId(cuentasData[0].id);
-      }
+      if (!cuentaSeleccionadaId) setCuentaSeleccionadaId(cuentasData[0].id);
+      if (!transferCuentaOrigenId) setTransferCuentaOrigenId(cuentasData[0].id);
+      if (!transferCuentaDestinoId && cuentasData.length > 1) setTransferCuentaDestinoId(cuentasData[1].id);
+      else if (!transferCuentaDestinoId) setTransferCuentaDestinoId(cuentasData[0].id);
+      if (!loanCuentaId) setLoanCuentaId(cuentasData[0].id);
+    }
+
+    // Traer Entidades (para Préstamos)
+    const { data: entData } = await supabase.from('entidades').select('*').order('nombre');
+    if (entData) {
+      setEntidades(entData);
+      if (entData.length > 0 && !loanEntidadId) setLoanEntidadId(entData[0].id);
     }
 
     // Traer TODO el historial de movimientos
@@ -102,6 +131,131 @@ export default function FlujoCajaScreen() {
       alert('Error al registrar: ' + error.message);
     } finally {
       setProcesando(false);
+    }
+  };
+
+  const registrarTransferencia = async () => {
+    if (!transferMontoEnviado || isNaN(Number(transferMontoEnviado)) || Number(transferMontoEnviado) <= 0) {
+      return alert('Ingresa un monto enviado válido mayor a 0');
+    }
+    if (!transferMontoRecibido || isNaN(Number(transferMontoRecibido)) || Number(transferMontoRecibido) <= 0) {
+      return alert('Ingresa un monto recibido válido mayor a 0');
+    }
+    if (!transferCuentaOrigenId || !transferCuentaDestinoId) {
+      return alert('Selecciona ambas cuentas');
+    }
+    if (transferCuentaOrigenId === transferCuentaDestinoId) {
+      return alert('La cuenta de origen y destino no pueden ser la misma');
+    }
+
+    const cuentaOrigen = cuentas.find(c => c.id === transferCuentaOrigenId);
+    const cuentaDestino = cuentas.find(c => c.id === transferCuentaDestinoId);
+    if (!cuentaOrigen || !cuentaDestino) return alert('Cuenta no encontrada');
+
+    // Validar saldo suficiente en cuenta origen
+    if (cuentaOrigen.saldo_actual !== undefined && cuentaOrigen.saldo_actual < Number(transferMontoEnviado)) {
+      const proceed = window.confirm(`⚠️ ADVERTENCIA DE SALDO\n\nLa cuenta de origen "${cuentaOrigen.nombre}" solo tiene ${cuentaOrigen.saldo_actual.toLocaleString()} ${cuentaOrigen.moneda}, pero estás intentando transferir ${Number(transferMontoEnviado).toLocaleString()} ${cuentaOrigen.moneda}.\n\nSi continúas, el saldo quedará en negativo.\n\n¿Estás seguro de que deseas realizar esta transferencia de todas formas?`);
+      if (!proceed) return;
+    }
+
+    setProcesandoTransferencia(true);
+    try {
+      const enviado = Number(transferMontoEnviado);
+      const recibido = Number(transferMontoRecibido);
+      const tasa = recibido / enviado;
+      const esDistintaMoneda = cuentaOrigen.moneda !== cuentaDestino.moneda;
+      
+      const descTasa = esDistintaMoneda 
+        ? ` (Tasa: 1 ${cuentaOrigen.moneda} = ${tasa.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${cuentaDestino.moneda})` 
+        : '';
+        
+      const descEgreso = `Transferencia saliente a ${cuentaDestino.nombre}${descTasa}`;
+      const descIngreso = `Transferencia entrante desde ${cuentaOrigen.nombre}${descTasa}`;
+
+      // Insertar ambos movimientos
+      const { error } = await supabase.from('movimientos_caja').insert([
+        {
+          cuenta_id: transferCuentaOrigenId,
+          tipo_movimiento: 'Egreso',
+          monto: enviado,
+          descripcion: descEgreso
+        },
+        {
+          cuenta_id: transferCuentaDestinoId,
+          tipo_movimiento: 'Ingreso',
+          monto: recibido,
+          descripcion: descIngreso
+        }
+      ]);
+
+      if (error) throw error;
+
+      alert('¡Transferencia registrada con éxito!');
+      setTransferModalVisible(false);
+      setTransferMontoEnviado('');
+      setTransferMontoRecibido('');
+      fetchData();
+    } catch (error: any) {
+      alert('Error al registrar transferencia: ' + error.message);
+    } finally {
+      setProcesandoTransferencia(false);
+    }
+  };
+
+  const registrarPrestamo = async () => {
+    if (!loanCuentaId) return alert('Selecciona una cuenta de origen');
+    if (!loanEntidadId) return alert('Selecciona un cliente del directorio');
+    if (!loanMonto || isNaN(Number(loanMonto)) || Number(loanMonto) <= 0) {
+      return alert('Ingresa un monto de préstamo válido');
+    }
+
+    const cuenta = cuentas.find(c => c.id === loanCuentaId);
+    const cliente = entidades.find(e => e.id === loanEntidadId);
+    if (!cuenta || !cliente) return alert('Cuenta o cliente no encontrado');
+
+    // Validar saldo suficiente en cuenta origen
+    if (cuenta.saldo_actual !== undefined && cuenta.saldo_actual < Number(loanMonto)) {
+      const proceed = window.confirm(`⚠️ ADVERTENCIA DE SALDO\n\nLa cuenta "${cuenta.nombre}" solo tiene ${cuenta.saldo_actual.toLocaleString()} ${cuenta.moneda}, pero estás prestando ${Number(loanMonto).toLocaleString()} ${cuenta.moneda}.\n\nSi continúas, el saldo quedará en negativo.\n\n¿Estás seguro de que deseas registrar este préstamo de todas formas?`);
+      if (!proceed) return;
+    }
+
+    setProcesandoPrestamo(true);
+    try {
+      const montoN = Number(loanMonto);
+      
+      // Calcular equivalente en COP
+      let montoCOP = montoN;
+      if (cuenta.moneda === 'USD') montoCOP = montoN * tasaUSD;
+      if (cuenta.moneda === 'VES') montoCOP = montoN * tasaVES;
+
+      // 1. Insertar Egreso en Flujo de Caja
+      const { error: errMov } = await supabase.from('movimientos_caja').insert([{
+        cuenta_id: loanCuentaId,
+        tipo_movimiento: 'Egreso',
+        monto: montoN,
+        descripcion: `Préstamo otorgado a ${cliente.nombre}. Cuentas por cobrar.${loanDescripcion ? ' Nota: ' + loanDescripcion.trim() : ''}`
+      }]);
+      if (errMov) throw errMov;
+
+      // 2. Insertar Crédito (San) en cuentas por cobrar
+      const { error: errSan } = await supabase.from('sanes').insert([{
+        entidad_id: loanEntidadId,
+        monto_total: montoCOP,
+        saldo_pendiente: montoCOP,
+        frecuencia_pago: loanFrecuencia,
+        estado: 'ACTIVO'
+      }]);
+      if (errSan) throw errSan;
+
+      alert(`¡Préstamo registrado con éxito! Se creó una cuenta por cobrar por $${montoCOP.toLocaleString()} COP.`);
+      setLoanModalVisible(false);
+      setLoanMonto('');
+      setLoanDescripcion('');
+      fetchData();
+    } catch (error: any) {
+      alert('Error al registrar préstamo: ' + error.message);
+    } finally {
+      setProcesandoPrestamo(false);
     }
   };
 
@@ -166,10 +320,19 @@ export default function FlujoCajaScreen() {
         <Text style={styles.title}>Flujo de Caja</Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#10B981'}]} onPress={() => { setTipoMovimiento('Ingreso'); setModalVisible(true); }}>
-            <Text style={styles.actionBtnText}>+ Inyectar</Text>
+            <Text style={styles.actionBtnText}>📥 Inyectar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#DC2626'}]} onPress={() => { setTipoMovimiento('Egreso'); setModalVisible(true); }}>
-            <Text style={styles.actionBtnText}>- Gasto</Text>
+            <Text style={styles.actionBtnText}>📤 Gasto</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#3B82F6'}]} onPress={() => setTransferModalVisible(true)}>
+            <Text style={styles.actionBtnText}>🔀 Transferir</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, {backgroundColor: '#F59E0B'}]} onPress={() => {
+            setLoanModalVisible(true);
+            if (entidades.length > 0 && !loanEntidadId) setLoanEntidadId(entidades[0].id);
+          }}>
+            <Text style={styles.actionBtnText}>🤝 Préstamo</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -369,6 +532,192 @@ export default function FlujoCajaScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* MODAL: Transferencia entre Cuentas */}
+      <Modal visible={transferModalVisible} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>🔀 Transferir entre Cuentas</Text>
+                <TouchableOpacity onPress={() => setTransferModalVisible(false)}><Text style={styles.closeBtn}>✕</Text></TouchableOpacity>
+              </View>
+
+              <View style={styles.modalContent}>
+                <Text style={styles.label}>Cuenta de Origen (Envía)</Text>
+                <View style={styles.pillsContainer}>
+                  {cuentas.filter(c => c.tipo?.toLowerCase() !== 'deuda').map(cuenta => (
+                    <TouchableOpacity 
+                      key={cuenta.id} 
+                      style={[styles.pill, transferCuentaOrigenId === cuenta.id && styles.pillActive]}
+                      onPress={() => setTransferCuentaOrigenId(cuenta.id)}
+                    >
+                      <Text style={[styles.pillText, transferCuentaOrigenId === cuenta.id && styles.pillTextActive]}>
+                        {cuenta.nombre} ({cuenta.moneda})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.label}>Cuenta de Destino (Recibe)</Text>
+                <View style={styles.pillsContainer}>
+                  {cuentas.filter(c => c.tipo?.toLowerCase() !== 'deuda').map(cuenta => (
+                    <TouchableOpacity 
+                      key={cuenta.id} 
+                      style={[styles.pill, transferCuentaDestinoId === cuenta.id && styles.pillActive]}
+                      onPress={() => setTransferCuentaDestinoId(cuenta.id)}
+                    >
+                      <Text style={[styles.pillText, transferCuentaDestinoId === cuenta.id && styles.pillTextActive]}>
+                        {cuenta.nombre} ({cuenta.moneda})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={{flexDirection: 'row', gap: 10}}>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.label}>Monto Enviado ({cuentas.find(c => c.id === transferCuentaOrigenId)?.moneda || ''})</Text>
+                    <TextInput 
+                      style={[styles.input, {outlineStyle: 'none'} as any]} 
+                      placeholder="0.00" 
+                      keyboardType="numeric"
+                      value={transferMontoEnviado}
+                      onChangeText={setTransferMontoEnviado}
+                    />
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.label}>Monto Recibido ({cuentas.find(c => c.id === transferCuentaDestinoId)?.moneda || ''})</Text>
+                    <TextInput 
+                      style={[styles.input, {outlineStyle: 'none'} as any]} 
+                      placeholder="0.00" 
+                      keyboardType="numeric"
+                      value={transferMontoRecibido}
+                      onChangeText={setTransferMontoRecibido}
+                    />
+                  </View>
+                </View>
+
+                {/* Mostrar la tasa calculada */}
+                {transferMontoEnviado !== '' && transferMontoRecibido !== '' && 
+                 !isNaN(Number(transferMontoEnviado)) && !isNaN(Number(transferMontoRecibido)) && 
+                 Number(transferMontoEnviado) > 0 && Number(transferMontoRecibido) > 0 && (
+                  <View style={[styles.conversionBox, {backgroundColor: '#EFF6FF'}]}>
+                    <Text style={{color: '#1E40AF', fontSize: 13, fontWeight: 'bold'}}>
+                      Tasa de Cambio Calculada:
+                    </Text>
+                    <Text style={{color: '#1E40AF', fontSize: 14, marginTop: 4}}>
+                      1 {cuentas.find(c => c.id === transferCuentaOrigenId)?.moneda} = {(Number(transferMontoRecibido) / Number(transferMontoEnviado)).toLocaleString(undefined, {maximumFractionDigits: 4})} {cuentas.find(c => c.id === transferCuentaDestinoId)?.moneda}
+                    </Text>
+                  </View>
+                )}
+
+                {procesandoTransferencia ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 20}} /> : (
+                  <TouchableOpacity 
+                    style={[styles.submitBtn, {backgroundColor: '#3B82F6'}]}
+                    onPress={registrarTransferencia}
+                  >
+                    <Text style={styles.submitBtnText}>Confirmar Transferencia</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: Nuevo Préstamo */}
+      <Modal visible={loanModalVisible} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>🤝 Otorgar Préstamo de Dinero</Text>
+                <TouchableOpacity onPress={() => setLoanModalVisible(false)}><Text style={styles.closeBtn}>✕</Text></TouchableOpacity>
+              </View>
+
+              <View style={styles.modalContent}>
+                <Text style={styles.label}>Cuenta de Origen (Sale el dinero)</Text>
+                <View style={styles.pillsContainer}>
+                  {cuentas.filter(c => c.tipo?.toLowerCase() !== 'deuda').map(cuenta => (
+                    <TouchableOpacity 
+                      key={cuenta.id} 
+                      style={[styles.pill, loanCuentaId === cuenta.id && styles.pillActive]}
+                      onPress={() => setLoanCuentaId(cuenta.id)}
+                    >
+                      <Text style={[styles.pillText, loanCuentaId === cuenta.id && styles.pillTextActive]}>
+                        {cuenta.nombre} ({cuenta.moneda})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.label}>Cliente (A quién se presta) *</Text>
+                <View style={[styles.pillsContainer, {maxHeight: 120, overflow: 'scroll'}]}>
+                  {entidades.map(ent => (
+                    <TouchableOpacity 
+                      key={ent.id} 
+                      style={[styles.pill, loanEntidadId === ent.id && styles.pillActive]}
+                      onPress={() => setLoanEntidadId(ent.id)}
+                    >
+                      <Text style={[styles.pillText, loanEntidadId === ent.id && styles.pillTextActive]}>
+                        {ent.nombre}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.label}>Monto Prestado ({cuentas.find(c => c.id === loanCuentaId)?.moneda || ''}) *</Text>
+                <TextInput 
+                  style={[styles.input, {outlineStyle: 'none'} as any]} 
+                  placeholder="0.00" 
+                  keyboardType="numeric"
+                  value={loanMonto}
+                  onChangeText={setLoanMonto}
+                />
+
+                {/* Mostrar conversión a COP al vuelo si la cuenta no es COP */}
+                {loanMonto !== '' && !isNaN(Number(loanMonto)) && cuentas.find(c => c.id === loanCuentaId)?.moneda !== 'COP' && (
+                  <View style={styles.conversionBox}>
+                    <Text style={styles.conversionText}>
+                      Se creará una deuda por: <Text style={{fontWeight: 'bold'}}>${(Number(loanMonto) * (cuentas.find(c => c.id === loanCuentaId)?.moneda === 'USD' ? tasaUSD : tasaVES)).toLocaleString()} COP</Text>
+                    </Text>
+                  </View>
+                )}
+
+                <Text style={styles.label}>Acuerdo de Cobro (Frecuencia) *</Text>
+                <View style={styles.freqContainer}>
+                  {['Semanal', 'Quincenal', 'Mensual'].map(f => (
+                    <TouchableOpacity 
+                      key={f} 
+                      style={[styles.freqPill, loanFrecuencia === f && styles.freqPillActive]}
+                      onPress={() => setLoanFrecuencia(f)}
+                    >
+                      <Text style={[styles.freqText, loanFrecuencia === f && styles.freqTextActive]}>{f}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.label}>Descripción / Nota del Préstamo (Opcional)</Text>
+                <TextInput 
+                  style={[styles.input, {outlineStyle: 'none'} as any]} 
+                  placeholder="Ej. Dinero prestado para..." 
+                  value={loanDescripcion}
+                  onChangeText={setLoanDescripcion}
+                />
+
+                {procesandoPrestamo ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 20}} /> : (
+                  <TouchableOpacity 
+                    style={[styles.submitBtn, {backgroundColor: '#F59E0B'}]}
+                    onPress={registrarPrestamo}
+                  >
+                    <Text style={styles.submitBtnText}>Registrar Préstamo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -442,5 +791,14 @@ const styles = StyleSheet.create({
   // Detalles Modal
   detalleLabel: { fontSize: 12, color: '#6B7280', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 4 },
   detalleValue: { fontSize: 16, color: '#1A1A1A', fontWeight: 'bold', marginBottom: 15 },
-  detalleValueDesc: { fontSize: 14, color: '#1A1A1A', lineHeight: 22, backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' }
+  detalleValueDesc: { fontSize: 14, color: '#1A1A1A', lineHeight: 22, backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+
+  // Nuevos estilos para Préstamo y Transferencia
+  freqContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  freqPill: { paddingHorizontal: 15, paddingVertical: 10, backgroundColor: '#F3F4F6', borderRadius: 12 },
+  freqPillActive: { backgroundColor: '#1A1A1A' },
+  freqText: { fontSize: 13, color: '#4B5563', fontWeight: 'bold' },
+  freqTextActive: { color: '#FFF' },
+  conversionBox: { backgroundColor: '#FEF3C7', padding: 12, borderRadius: 8, marginBottom: 15 },
+  conversionText: { color: '#92400E', fontSize: 13 }
 });
