@@ -3,19 +3,12 @@
  * 
  * INSTRUCCIONES:
  * 1. Instala las dependencias: npm install @supabase/supabase-js sharp
- * 2. Ejecuta: node compress-existing-images.js
- * 
- * Este script:
- * - Lista todos los archivos en el bucket 'productos_img'
- * - Descarga cada imagen
- * - La comprime a max 800px de ancho con calidad 70% JPEG
- * - La re-sube sobreescribiendo la original
- * - Muestra un resumen del espacio ahorrado
+ * 2. Ejecuta: node compress-existing-images.js <tu-correo> <tu-contraseña>
  */
 
 const { createClient } = require('@supabase/supabase-js');
 
-// ⚠️ USA TUS CREDENCIALES DE SUPABASE
+// USA TUS CREDENCIALES DE SUPABASE
 const supabaseUrl = 'https://oxsaaxehamevzfnxqefx.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c2FheGVoYW1ldnpmbnhxZWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NzQ1NjIsImV4cCI6MjA5MjQ1MDU2Mn0.5J9func6UyhvBxt5XakKEQiQsXdUV5KO-7W4O8atXMQ';
 
@@ -26,6 +19,27 @@ const MAX_WIDTH = 800;
 const QUALITY = 70;
 
 async function compressExistingImages() {
+  const email = process.argv[2];
+  const password = process.argv[3];
+
+  if (!email || !password) {
+    console.log('⚠️  Para ejecutar este script, debes iniciar sesión con tus credenciales de la app.');
+    console.log('Uso: node compress-existing-images.js <correo> <contraseña>\n');
+    return;
+  }
+
+  console.log('🔑 Iniciando sesión en Supabase...');
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (authError) {
+    console.error('❌ Error al iniciar sesión:', authError.message);
+    return;
+  }
+
+  console.log(`✅ Sesión iniciada con éxito (${authData.user.email})\n`);
   console.log('🔍 Listando archivos en el bucket...\n');
   
   const { data: files, error } = await supabase.storage.from(BUCKET).list('', {
@@ -63,7 +77,6 @@ async function compressExistingImages() {
     sharp = require('sharp');
   } catch (e) {
     console.error('❌ Error: "sharp" no está instalado. Ejecuta: npm install sharp');
-    console.log('\nAlternativa sin sharp: Puedes usar este script desde el navegador.');
     return;
   }
 
@@ -89,7 +102,7 @@ async function compressExistingImages() {
       // 2. Comprimir con sharp
       const compressedBuffer = await sharp(originalBuffer)
         .resize(MAX_WIDTH, null, { 
-          withoutEnlargement: true, // No agrandar imágenes pequeñas
+          withoutEnlargement: true, 
           fit: 'inside' 
         })
         .jpeg({ quality: QUALITY })

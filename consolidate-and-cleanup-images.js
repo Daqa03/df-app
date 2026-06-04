@@ -4,7 +4,7 @@
  * 
  * INSTRUCCIONES:
  * 1. Instala las dependencias si no lo están: npm install @supabase/supabase-js
- * 2. Ejecuta: node consolidate-and-cleanup-images.js
+ * 2. Ejecuta: node consolidate-and-cleanup-images.js <tu-correo> <tu-contraseña>
  */
 
 const { createClient } = require('@supabase/supabase-js');
@@ -17,6 +17,27 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const BUCKET = 'productos_img';
 
 async function consolidateAndCleanup() {
+  const email = process.argv[2];
+  const password = process.argv[3];
+
+  if (!email || !password) {
+    console.log('⚠️  Para ejecutar este script, debes iniciar sesión con tus credenciales de la app.');
+    console.log('Uso: node consolidate-and-cleanup-images.js <correo> <contraseña>\n');
+    return;
+  }
+
+  console.log('🔑 Iniciando sesión en Supabase...');
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (authError) {
+    console.error('❌ Error al iniciar sesión:', authError.message);
+    return;
+  }
+
+  console.log(`✅ Sesión iniciada con éxito (${authData.user.email})\n`);
   console.log('🔍 Cargando productos de la base de datos...\n');
   
   const { data: productos, error: prodError } = await supabase
