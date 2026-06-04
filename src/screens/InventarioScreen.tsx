@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, Button, ActivityIndicator, Image, TouchableOpacity, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../supabase';
+import { compressImageForUpload } from '../utils/imageUtils';
 
 export default function InventarioScreen() {
   const [codigoSku, setCodigoSku] = useState('');
@@ -31,13 +32,11 @@ export default function InventarioScreen() {
   // 2. Función para subir a Supabase Storage
   const subirImagenASupabase = async (uri: string) => {
     try {
-      // Convertimos la imagen a un formato que Supabase entienda (Blob)
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      // Comprimimos la imagen antes de subirla
+      const blob = await compressImageForUpload(uri, 800, 0.7);
       
       // Creamos un nombre único para el archivo
-      const fileExt = uri.split('.').pop() || 'jpg';
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
 
       // Subimos al bucket
       const { data, error } = await supabase.storage

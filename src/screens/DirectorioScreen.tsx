@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Modal, TextInput, useWindowDimensions } from 'react-native';
 import { supabase } from '../../supabase';
+import { fuzzyMatch } from '../utils/searchUtils';
 
 type Entidad = any;
 
@@ -106,7 +107,7 @@ export default function DirectorioScreen() {
 
   // Filtrado
   const entidadesFiltradas = entidades.filter(e => {
-    const coincideTexto = e.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || e.telefono?.includes(busqueda);
+    const coincideTexto = fuzzyMatch(e.nombre || '', busqueda) || e.telefono?.includes(busqueda);
     const coincideTipo = filtroTipo === 'Todos' || e.tipo === filtroTipo;
     return coincideTexto && coincideTipo;
   });

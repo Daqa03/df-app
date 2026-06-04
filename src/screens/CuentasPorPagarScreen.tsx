@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Modal, TextInput, useWindowDimensions } from 'react-native';
 import { supabase } from '../../supabase';
+import { fuzzyMatch } from '../utils/searchUtils';
 
 type Deuda = any;
 type Entidad = any;
@@ -180,7 +181,7 @@ export default function CuentasPorPagarScreen() {
 
   const deudasFiltradas = deudas.filter(d => {
     const coincideFiltro = d.estado === filtroEstado;
-    const coincideBusqueda = d.entidades?.nombre?.toLowerCase().includes(busqueda.toLowerCase());
+    const coincideBusqueda = fuzzyMatch(d.entidades?.nombre || '', busqueda);
     return coincideFiltro && (!busqueda ? true : coincideBusqueda);
   });
 

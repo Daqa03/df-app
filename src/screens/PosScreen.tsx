@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Image, useWindowDimensions, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Image, useWindowDimensions, Modal, Animated } from 'react-native';
 import { supabase } from '../../supabase';
+import { fuzzyMatch } from '../utils/searchUtils';
+import Toast from '../components/Toast';
 
 type Producto = any;
 type ItemCarrito = { producto: Producto; cantidad: number; tipoPrecio: 'detal' | 'mayor'; };
@@ -48,6 +50,12 @@ export default function PosScreen() {
   const [frecuenciaSan, setFrecuenciaSan] = useState('Quincenal');
   const [procesando, setProcesando] = useState(false);
 
+  // Toast feedback
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [productoRecienAgregadoId, setProductoRecienAgregadoId] = useState<string | null>(null);
+  const highlightTimeout = useRef<any>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -92,8 +100,8 @@ export default function PosScreen() {
   }, []);
 
   const productosFiltrados = productos.filter(p =>
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (p.codigo_sku && p.codigo_sku.toLowerCase().includes(busqueda.toLowerCase()))
+    fuzzyMatch(p.nombre, busqueda) ||
+    (p.codigo_sku && fuzzyMatch(p.codigo_sku, busqueda))
   );
 
   const agregarAlCarrito = (producto: Producto) => {
@@ -104,6 +112,13 @@ export default function PosScreen() {
     } else {
       setCarrito([...carrito, { producto, cantidad: 1, tipoPrecio: 'detal' }]);
     }
+
+    // Feedback visual: toast + highlight
+    setToastMessage(`${producto.nombre} agregado`);
+    setToastVisible(true);
+    setProductoRecienAgregadoId(producto.id);
+    if (highlightTimeout.current) clearTimeout(highlightTimeout.current);
+    highlightTimeout.current = setTimeout(() => setProductoRecienAgregadoId(null), 800);
   };
 
   const modificarCantidad = (id: string, delta: number) => {
@@ -359,6 +374,7 @@ export default function PosScreen() {
 
   return (
     <View style={[styles.container, isDesktop && styles.rowLayout]}>
+      <Toast visible={toastVisible} message={toastMessage} onHide={() => setToastVisible(false)} />
 
       {/* SECCIÓN IZQUIERDA: CATÁLOGO */}
       <View style={styles.catalogoSection}>
@@ -372,7 +388,7 @@ export default function PosScreen() {
         {loading ? <ActivityIndicator size="large" color="#6B0D23" style={{ marginTop: 50 }} /> : (
           <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
             {productosFiltrados.map((prod) => (
-              <TouchableOpacity key={prod.id} style={[styles.prodCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
+              <TouchableOpacity key={prod.id} style={[styles.prodCard, !isDesktop && { width: '47%' }, productoRecienAgregadoId === prod.id && styles.prodCardHighlight]} onPress={() => agregarAlCarrito(prod)}>
                 <Image source={{ uri: prod.imagen_url || 'https://via.placeholder.com/150?text=S/F' }} style={styles.prodImg} />
                 <View style={styles.prodInfo}>
                   {prod.codigo_sku ? <Text style={styles.skuText}>[{prod.codigo_sku}]</Text> : null}
@@ -470,7 +486,7 @@ export default function PosScreen() {
                 />
 
                 <View style={[styles.pillsContainer, { maxHeight: 150, overflow: 'hidden' }]}>
-                  {entidades.filter(e => e.nombre.toLowerCase().includes(busquedaCliente.toLowerCase())).slice(0, 10).map(ent => (
+                  {entidades.filter(e => fuzzyMatch(e.nombre, busquedaCliente)).slice(0, 10).map(ent => (
                     <TouchableOpacity
                       key={ent.id}
                       style={[styles.paymentPill, clienteId === ent.id && styles.paymentPillActive]}
@@ -565,7 +581,8 @@ const styles = StyleSheet.create({
   searchBox: { backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 15, height: 45, justifyContent: 'center', elevation: 2, shadowOpacity: 0.05 },
   searchInput: { fontSize: 15 },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 80 },
-  prodCard: { backgroundColor: '#FFF', width: 140, borderRadius: 16, overflow: 'hidden', elevation: 2, shadowOpacity: 0.05 },
+  prodCard: { backgroundColor: '#FFF', width: 140, borderRadius: 16, overflow: 'hidden', elevation: 2, shadowOpacity: 0.05, borderWidth: 2, borderColor: 'transparent' },
+  prodCardHighlight: { borderColor: '#10B981', backgroundColor: '#ECFDF5' },
   prodImg: { width: '100%', height: 100, backgroundColor: '#F3F4F6' },
   prodInfo: { padding: 10 },
   skuText: { fontSize: 11, color: '#9CA3AF', fontWeight: 'bold', marginBottom: 2 },

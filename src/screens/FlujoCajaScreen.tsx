@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Modal, TextInput, useWindowDimensions } from 'react-native';
 import { supabase } from '../../supabase';
+import { fuzzyMatch } from '../utils/searchUtils';
 
 type Cuenta = any;
 type Movimiento = any;
@@ -121,11 +122,11 @@ export default function FlujoCajaScreen() {
   const movimientosFiltrados = movimientos.filter(mov => {
     let pasaTexto = true;
     if (busquedaHistorial) {
-      const termino = busquedaHistorial.toLowerCase();
+      const termino = busquedaHistorial;
       const fechaText = new Date(mov.fecha).toLocaleDateString();
       pasaTexto = (
-        (mov.descripcion && mov.descripcion.toLowerCase().includes(termino)) ||
-        (mov.cuentas?.nombre && mov.cuentas.nombre.toLowerCase().includes(termino)) ||
+        (mov.descripcion && fuzzyMatch(mov.descripcion, termino)) ||
+        (mov.cuentas?.nombre && fuzzyMatch(mov.cuentas.nombre, termino)) ||
         mov.monto.toString().includes(termino) ||
         fechaText.includes(termino)
       );

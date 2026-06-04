@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Modal, TextInput, useWindowDimensions } from 'react-native';
 import { supabase } from '../../supabase';
+import { fuzzyMatch } from '../utils/searchUtils';
 
 type San = any;
 type Entidad = any;
@@ -171,7 +172,7 @@ export default function SanesScreen() {
 
   const sanesFiltrados = sanes.filter(s => {
     const coincideFiltro = s.estado === filtroEstado;
-    const coincideBusqueda = s.entidades?.nombre?.toLowerCase().includes(busqueda.toLowerCase());
+    const coincideBusqueda = fuzzyMatch(s.entidades?.nombre || '', busqueda);
     return coincideFiltro && (!busqueda ? true : coincideBusqueda);
   });
 

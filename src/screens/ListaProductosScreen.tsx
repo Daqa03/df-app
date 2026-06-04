@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, ActivityIndicator, TextInput, TouchableOpacity, Image, useWindowDimensions, Modal, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../supabase';
+import { normalizeText, fuzzyMatch } from '../utils/searchUtils';
+import { compressImageForUpload } from '../utils/imageUtils';
 
 type TipoVista = 'grid' | 'list' | 'compact';
 
@@ -55,7 +57,10 @@ export default function ListaProductosScreen() {
   const cargarProductos = async () => {
     setLoading(true);
     let query = supabase.from('productos').select('*', { count: 'exact' });
-    if (busqueda.trim() !== '') query = query.or(`nombre.ilike.%${busqueda}%,codigo_sku.ilike.%${busqueda}%`);
+    if (busqueda.trim() !== '') {
+      const termNorm = normalizeText(busqueda);
+      query = query.or(`nombre.ilike.%${busqueda}%,codigo_sku.ilike.%${busqueda}%,nombre.ilike.%${termNorm}%,codigo_sku.ilike.%${termNorm}%`);
+    }
     const from = (paginaActual - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
@@ -112,7 +117,8 @@ export default function ListaProductosScreen() {
     try {
       let imageUrlFinal = null;
       if (nImagenUri) {
-        const response = await fetch(nImagenUri); const blob = await response.blob(); const fileName = `nuevo-${Date.now()}.jpg`;
+        const fileName = `nuevo-${Date.now()}.jpg`;
+        const blob = await compressImageForUpload(nImagenUri, 800, 0.7);
         const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
         if (!uploadError) { const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); imageUrlFinal = data.publicUrl; }
       }
@@ -143,7 +149,8 @@ export default function ListaProductosScreen() {
     setLoading(true);
     let urlFinal = imagenUrlEdit;
     if (nuevaImagenUri) {
-      const response = await fetch(nuevaImagenUri); const blob = await response.blob(); const fileName = `${Date.now()}.jpg`;
+      const fileName = `${Date.now()}.jpg`;
+      const blob = await compressImageForUpload(nuevaImagenUri, 800, 0.7);
       const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
       if (!uploadError) { const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); urlFinal = data.publicUrl; }
     }

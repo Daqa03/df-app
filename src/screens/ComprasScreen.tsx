@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, useWindowDimensions, Modal, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../supabase';
+import { fuzzyMatch } from '../utils/searchUtils';
+import { compressImageForUpload } from '../utils/imageUtils';
+import Toast from '../components/Toast';
 
 type Producto = any;
 type Entidad = any;
@@ -64,6 +67,12 @@ export default function ComprasScreen() {
   // Móvil
   const [carritoVisibleMovil, setCarritoVisibleMovil] = useState(false);
 
+  // Toast feedback
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [productoRecienAgregadoId, setProductoRecienAgregadoId] = useState<string | null>(null);
+  const highlightTimeout = useRef<any>(null);
+
   // Modal Editar Precios
   const [modalPrecios, setModalPrecios] = useState(false);
   const [productoEdicion, setProductoEdicion] = useState<Producto | null>(null);
@@ -113,6 +122,13 @@ export default function ComprasScreen() {
       // El costo por defecto es el costo actual del producto
       setCarrito([...carrito, { producto: prod, cantidad: 1, costo_unitario: prod.costo_cop || 0 }]);
     }
+
+    // Feedback visual: toast + highlight
+    setToastMessage(`${prod.nombre} agregado`);
+    setToastVisible(true);
+    setProductoRecienAgregadoId(prod.id);
+    if (highlightTimeout.current) clearTimeout(highlightTimeout.current);
+    highlightTimeout.current = setTimeout(() => setProductoRecienAgregadoId(null), 800);
   };
 
   const actualizarCantidad = (prodId: string, delta: number) => {
@@ -156,9 +172,8 @@ export default function ComprasScreen() {
     try {
       let imageUrlFinal = null;
       if (nImagenUri) {
-        const response = await fetch(nImagenUri); 
-        const blob = await response.blob(); 
         const fileName = `nuevo-${Date.now()}.jpg`;
+        const blob = await compressImageForUpload(nImagenUri, 800, 0.7);
         const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
         if (!uploadError) { 
           const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); 
@@ -418,12 +433,13 @@ export default function ComprasScreen() {
   );
 
   const productosFiltrados = productos.filter(p => 
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
-    (p.codigo_sku && p.codigo_sku.toLowerCase().includes(busqueda.toLowerCase()))
+    fuzzyMatch(p.nombre, busqueda) || 
+    (p.codigo_sku && fuzzyMatch(p.codigo_sku, busqueda))
   );
 
   return (
     <View style={[styles.container, isDesktop ? {flexDirection: 'row'} : {flexDirection: 'column'}]}>
+      <Toast visible={toastVisible} message={toastMessage} onHide={() => setToastVisible(false)} />
       
       {/* PANEL IZQUIERDO: Buscador de Productos */}
       <View style={[styles.leftPanel, isDesktop && {flex: 1.5, borderRightWidth: 1, borderColor: '#E5E7EB'}]}>
@@ -447,7 +463,7 @@ export default function ComprasScreen() {
         {loading ? <ActivityIndicator size="large" color="#6B0D23" style={{marginTop: 50}}/> : (
           <ScrollView contentContainerStyle={styles.productosGrid} showsVerticalScrollIndicator={false}>
             {productosFiltrados.map(prod => (
-              <TouchableOpacity key={prod.id} style={[styles.productoCard, !isDesktop && { width: '47%' }]} onPress={() => agregarAlCarrito(prod)}>
+              <TouchableOpacity key={prod.id} style={[styles.productoCard, !isDesktop && { width: '47%' }, productoRecienAgregadoId === prod.id && styles.productoCardHighlight]} onPress={() => agregarAlCarrito(prod)}>
                 <View style={styles.productoImageContainer}>
                   {prod.imagen_url ? (
                     <Image source={{uri: prod.imagen_url}} style={styles.productoImageFull} />
@@ -647,7 +663,8 @@ const styles = StyleSheet.create({
   searchInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 12, padding: 15, fontSize: 15, marginBottom: 20 },
   
   productosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingBottom: 50 },
-  productoCard: { backgroundColor: '#FFF', width: 150, borderRadius: 16, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, borderWidth: 1, borderColor: '#F3F4F6' },
+  productoCard: { backgroundColor: '#FFF', width: 150, borderRadius: 16, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, borderWidth: 2, borderColor: '#F3F4F6' },
+  productoCardHighlight: { borderColor: '#10B981', backgroundColor: '#ECFDF5' },
   productoImageContainer: { width: '100%', height: 120, backgroundColor: '#F3F4F6' },
   productoImageFull: { width: '100%', height: '100%', resizeMode: 'cover' },
   productoIconFull: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
