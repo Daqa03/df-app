@@ -116,18 +116,43 @@ export default function ListaProductosScreen() {
     setGuardandoNuevo(true);
     try {
       let imageUrlFinal = null;
-      if (nImagenUri) {
+
+      // 1. Intentar reutilizar imagen existente si ya hay un producto con el mismo nombre que tiene imagen
+      if (nNombre) {
+        const { data: matchedProds } = await supabase
+          .from('productos')
+          .select('imagen_url')
+          .ilike('nombre', nNombre.trim())
+          .not('imagen_url', 'is', null)
+          .limit(1);
+        if (matchedProds && matchedProds.length > 0) {
+          imageUrlFinal = matchedProds[0].imagen_url;
+        }
+      }
+
+      // 2. Si no hay imagen existente y seleccionó una, subirla
+      if (!imageUrlFinal && nImagenUri) {
         const fileName = `nuevo-${Date.now()}.jpg`;
         const blob = await compressImageForUpload(nImagenUri, 800, 0.7);
         const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
         if (!uploadError) { const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); imageUrlFinal = data.publicUrl; }
       }
+
       const { error } = await supabase.from('productos').insert([{
         codigo_sku: nSku, nombre: nNombre, costo_cop: parseFloat(nCosto || '0'), 
         precio_detal_cop: parseFloat(nPrecioDetal), precio_mayor_cop: parseFloat(nPrecioMayor || '0'), 
         stock_actual: parseInt(nStock), imagen_url: imageUrlFinal
       }]);
       if (error) throw error;
+
+      // 3. Sincronizar la imagen a todos los productos con el mismo nombre si subimos una nueva o reutilizamos una existente
+      if (imageUrlFinal) {
+        await supabase
+          .from('productos')
+          .update({ imagen_url: imageUrlFinal })
+          .ilike('nombre', nNombre.trim());
+      }
+
       setNSku(''); setNNombre(''); setNCosto(''); setNPrecioDetal(''); setNPrecioMayor(''); setNStock(''); setNImagenUri(null);
       setModalVisible(false);
       cargarProductos();
@@ -147,18 +172,51 @@ export default function ListaProductosScreen() {
 
   const guardarCambios = async (id: string) => {
     setLoading(true);
-    let urlFinal = imagenUrlEdit;
-    if (nuevaImagenUri) {
-      const fileName = `${Date.now()}.jpg`;
-      const blob = await compressImageForUpload(nuevaImagenUri, 800, 0.7);
-      const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
-      if (!uploadError) { const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); urlFinal = data.publicUrl; }
+    try {
+      let urlFinal = imagenUrlEdit;
+
+      // 1. Si seleccionó una nueva imagen para subir
+      if (nuevaImagenUri) {
+        const fileName = `${Date.now()}.jpg`;
+        const blob = await compressImageForUpload(nuevaImagenUri, 800, 0.7);
+        const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
+        if (!uploadError) { const { data } = supabase.storage.from('productos_img').getPublicUrl(fileName); urlFinal = data.publicUrl; }
+      } else {
+        // 2. Si no subió imagen nueva, pero cambió el nombre, podemos verificar si el nuevo nombre ya tiene una imagen asociada en otro producto
+        const { data: matchedProds } = await supabase
+          .from('productos')
+          .select('imagen_url')
+          .ilike('nombre', nombre.trim())
+          .neq('id', id)
+          .not('imagen_url', 'is', null)
+          .limit(1);
+        if (matchedProds && matchedProds.length > 0) {
+          urlFinal = matchedProds[0].imagen_url;
+        }
+      }
+
+      const { error } = await supabase.from('productos').update({
+        codigo_sku: sku, nombre, costo_cop: parseFloat(costo), precio_detal_cop: parseFloat(precioDetal),
+        precio_mayor_cop: parseFloat(precioMayor), stock_actual: parseInt(stock), imagen_url: urlFinal
+      }).eq('id', id);
+      
+      if (error) throw error;
+
+      // 3. Sincronizar la imagen a todos los productos con el mismo nombre si existe
+      if (urlFinal) {
+        await supabase
+          .from('productos')
+          .update({ imagen_url: urlFinal })
+          .ilike('nombre', nombre.trim());
+      }
+
+      setEditandoId(null); 
+      cargarProductos();
+    } catch (error) { 
+      alert('Error al actualizar'); 
+    } finally {
+      setLoading(false);
     }
-    const { error } = await supabase.from('productos').update({
-      codigo_sku: sku, nombre, costo_cop: parseFloat(costo), precio_detal_cop: parseFloat(precioDetal),
-      precio_mayor_cop: parseFloat(precioMayor), stock_actual: parseInt(stock), imagen_url: urlFinal
-    }).eq('id', id);
-    if (!error) { setEditandoId(null); cargarProductos(); } else alert('Error al actualizar');
   };
 
   const eliminarProducto = async (id: string) => {

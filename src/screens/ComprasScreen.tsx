@@ -171,7 +171,22 @@ export default function ComprasScreen() {
     setProcesandoNuevo(true);
     try {
       let imageUrlFinal = null;
-      if (nImagenUri) {
+
+      // 1. Intentar reutilizar imagen existente si ya hay un producto con el mismo nombre que tiene imagen
+      if (nNombre) {
+        const { data: matchedProds } = await supabase
+          .from('productos')
+          .select('imagen_url')
+          .ilike('nombre', nNombre.trim())
+          .not('imagen_url', 'is', null)
+          .limit(1);
+        if (matchedProds && matchedProds.length > 0) {
+          imageUrlFinal = matchedProds[0].imagen_url;
+        }
+      }
+
+      // 2. Si no hay imagen existente y seleccionó una, subirla
+      if (!imageUrlFinal && nImagenUri) {
         const fileName = `nuevo-${Date.now()}.jpg`;
         const blob = await compressImageForUpload(nImagenUri, 800, 0.7);
         const { error: uploadError } = await supabase.storage.from('productos_img').upload(fileName, blob);
@@ -194,6 +209,14 @@ export default function ComprasScreen() {
 
       const { data, error } = await supabase.from('productos').insert([payload]).select().single();
       if (error) throw error;
+
+      // 3. Sincronizar la imagen a todos los productos con el mismo nombre si subimos una nueva
+      if (imageUrlFinal && nImagenUri) {
+        await supabase
+          .from('productos')
+          .update({ imagen_url: imageUrlFinal })
+          .ilike('nombre', nNombre.trim());
+      }
 
       alert('Producto creado y agregado a la compra.');
       setModalNuevoProducto(false);

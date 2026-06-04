@@ -63,9 +63,22 @@ export default function InventarioScreen() {
     
     try {
       let imageUrlFinal = null;
+
+      // 1. Intentar reutilizar imagen existente si ya hay un producto con el mismo nombre que tiene imagen
+      if (nombreProd) {
+        const { data: matchedProds } = await supabase
+          .from('productos')
+          .select('imagen_url')
+          .ilike('nombre', nombreProd.trim())
+          .not('imagen_url', 'is', null)
+          .limit(1);
+        if (matchedProds && matchedProds.length > 0) {
+          imageUrlFinal = matchedProds[0].imagen_url;
+        }
+      }
       
-      // Si el usuario seleccionó una foto, la subimos primero
-      if (imagenUri) {
+      // 2. Si no hay imagen existente y seleccionó una, subirla
+      if (!imageUrlFinal && imagenUri) {
         imageUrlFinal = await subirImagenASupabase(imagenUri);
       }
 
@@ -77,10 +90,18 @@ export default function InventarioScreen() {
         precio_mayor_cop: parseFloat(precioMayor || '0'),
         precio_detal_cop: parseFloat(precioDetal),
         stock_actual: parseInt(stockProd),
-        imagen_url: imageUrlFinal // <--- Guardamos el link
+        imagen_url: imageUrlFinal
       }]);
       
       if (error) throw error;
+
+      // 3. Sincronizar la imagen a todos los productos con el mismo nombre si subimos una nueva
+      if (imageUrlFinal && imagenUri) {
+        await supabase
+          .from('productos')
+          .update({ imagen_url: imageUrlFinal })
+          .ilike('nombre', nombreProd.trim());
+      }
       
       alert('¡Producto agregado al inventario!');
       // Limpiamos todo
