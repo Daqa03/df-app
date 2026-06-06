@@ -19,7 +19,9 @@ export async function compressImageForUpload(
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      img.crossOrigin = 'anonymous';
+    }
     
     img.onload = () => {
       // Calcular dimensiones manteniendo aspect ratio
