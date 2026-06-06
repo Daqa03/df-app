@@ -199,7 +199,6 @@ export default function ComprasScreen() {
       const payload = {
         nombre: nNombre,
         codigo_sku: nSku,
-        categoria: 'General', // Default ya que se eliminó el campo
         costo_cop: Number(nCosto),
         precio_detal_cop: Number(nPrecioDetal),
         precio_mayor_cop: Number(nPrecioMayor),
